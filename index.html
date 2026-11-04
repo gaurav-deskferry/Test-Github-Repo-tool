@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Swarmline — Multi-Agent Automation Platform</title>
+  <meta name="description" content="Swarmline orchestrates fleets of AI agents that plan, execute and verify your back-office work end to end." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#070A14',
+            surface: '#0E1324',
+            brand: {
+              50: '#eef4ff', 100: '#dbe6ff', 200: '#bed2ff', 300: '#92b4ff',
+              400: '#5e8bff', 500: '#3b66f6', 600: '#2847db', 700: '#2039b1',
+              800: '#1f338c', 900: '#1f306e'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+          },
+          keyframes: {
+            float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
+          },
+          animation: { float: 'float 6s ease-in-out infinite' }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <style>
+    body { background-color: #070A14; }
+    .glow { background: radial-gradient(60% 60% at 50% 0%, rgba(59,102,246,.35) 0%, rgba(7,10,20,0) 70%); }
+    .card-ring { box-shadow: inset 0 1px 0 0 rgba(255,255,255,.06); }
+    [v-cloak] { display: none; }
+  </style>
+</head>
+<body class="font-sans text-slate-300 antialiased">
+
+<div id="app" v-cloak>
+  <site-nav :links="nav" brand="Swarmline"></site-nav>
+
+  <main>
+    <hero-section
+      eyebrow="Multi-agent automation"
+      title="A workforce of agents that finishes the job."
+      subtitle="Swarmline plans the work, splits it across specialised agents, runs the tools and verifies every result — so your operations keep moving while you sleep."
+      :stats="heroStats">
+    </hero-section>
+
+    <logo-strip :logos="logos"></logo-strip>
+
+    <section-block
+      id="features"
+      eyebrow="Platform"
+      heading="Everything an agent fleet needs to be trusted"
+      sub="Orchestration, memory, tools and guardrails in one runtime — not five glued-together scripts.">
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <feature-card
+          v-for="feature in features"
+          :key="feature.title"
+          :icon="feature.icon"
+          :title="feature.title"
+          :body="feature.body">
+        </feature-card>
+      </div>
+    </section-block>
+
+    <section-block
+      id="agents"
+      eyebrow="The swarm"
+      heading="Specialised agents, one shared plan"
+      sub="Each agent owns a narrow job and reports back to the orchestrator. Pick a role to see what it handles.">
+      <agent-explorer :agents="agents"></agent-explorer>
+    </section-block>
+
+    <section-block
+      id="how"
+      eyebrow="How it works"
+      heading="From request to verified outcome"
+      sub="Four stages, fully observable. Every step emits a trace you can replay.">
+      <ol class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <step-card
+          v-for="(step, i) in steps"
+          :key="step.title"
+          :index="i + 1"
+          :title="step.title"
+          :body="step.body">
+        </step-card>
+      </ol>
+    </section-block>
+
+    <section-block
+      id="pricing"
+      eyebrow="Pricing"
+      heading="Start small, scale the swarm"
+      sub="Every plan includes traces, replays and human approval gates.">
+      <div class="grid gap-6 lg:grid-cols-3">
+        <pricing-card
+          v-for="plan in plans"
+          :key="plan.name"
+          :name="plan.name"
+          :price="plan.price"
+          :cadence="plan.cadence"
+          :description="plan.description"
+          :perks="plan.perks"
+          :featured="plan.featured"
+          :cta="plan.cta"
+          @select="selectPlan">
+        </pricing-card>
+      </div>
+      <p v-if="selectedPlan" class="mt-8 text-center text-sm text-brand-300">
+        Nice pick — the <span class="font-semibold">{{ selectedPlan }}</span> plan is ready when you are.
+      </p>
+    </section-block>
+
+    <cta-banner
+      title="Put your busywork on autopilot"
+      body="Spin up your first swarm in under ten minutes. No credit card, no migration."
+      action="Start free">
+    </cta-banner>
+  </main>
+
+  <site-footer brand="Swarmline" :columns="footerColumns"></site-footer>
+</div>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- Component templates                                                 -->
+<!-- ------------------------------------------------------------------ -->
+
+<script type="text/x-template" id="tpl-site-nav">
+  <header class="sticky top-0 z-50 border-b border-white/5 bg-ink/80 backdrop-blur-xl">
+    <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Main">
+      <a href="#top" class="flex items-center gap-2.5">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-extrabold text-white">S</span>
+        <span class="text-lg font-bold tracking-tight text-white">{{ brand }}</span>
+      </a>
+
+      <ul class="hidden items-center gap-1 md:flex">
+        <li v-for="link in links" :key="link.href">
+          <a :href="link.href"
+             class="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+            {{ link.label }}
+          </a>
+        </li>
+      </ul>
+
+      <div class="hidden items-center gap-3 md:flex">
+        <a href="#pricing" class="text-sm font-medium text-slate-300 transition hover:text-white">Sign in</a>
+        <a href="#pricing"
+           class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-400">
+          Start free
+        </a>
+      </div>
+
+      <button type="button"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/5 hover:text-white md:hidden"
+              :aria-expanded="open ? 'true' : 'false'"
+              aria-controls="mobile-menu"
+              aria-label="Toggle navigation"
+              @click="open = !open">
+        <svg v-if="!open" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+        <svg v-else class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </nav>
+
+    <div v-show="open" id="mobile-menu" class="border-t border-white/5 bg-ink md:hidden">
+      <ul class="space-y-1 px-4 py-4">
+        <li v-for="link in links" :key="link.href">
+          <a :href="link.href"
+             class="block rounded-lg px-3 py-2 text-base font-medium text-slate-300 transition hover:bg-white/5 hover:text-white"
+             @click="open = false">
+            {{ link.label }}
+          </a>
+        </li>
+        <li class="pt-2">
+          <a href="#pricing"
+             class="block rounded-lg bg-brand-500 px-3 py-2 text-center text-base font-semibold text-white"
+             @click="open = false">
+            Start free
+          </a>
+        </li>
+      </ul>
+    </div>
+  </header>
+</script>
+
+<script type="text/x-template" id="tpl-hero-section">
+  <section id="top" class="relative overflow-hidden">
+    <div class="glow pointer-events-none absolute inset-x-0 top-0 h-[40rem]"></div>
+    <div class="relative mx-auto max-w-7xl px-4 pb-20 pt-20 sm:px-6 sm:pt-28 lg:px-8">
+      <div class="mx-auto max-w-3xl text-center">
+        <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-brand-300">
+          <span class="h-1.5 w-1.5 rounded-full bg-brand-400"></span>{{ eyebrow }}
+        </span>
+        <h1 class="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-white sm:text-6xl">
+          {{ title }}
+        </h1>
+        <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-400">{{ subtitle }}</p>
+        <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a href="#pricing"
+             class="w-full rounded-xl bg-brand-500 px-6 py-3 text-center text-base font-semibold text-white shadow-xl shadow-brand-500/30 transition hover:bg-brand-400 sm:w-auto">
+            Deploy your first swarm
+          </a>
+          <a href="#how"
+             class="w-full rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-center text-base font-semibold text-white transition hover:bg-white/10 sm:w-auto">
+            See how it works
+          </a>
+        </div>
+      </div>
+
+      <div class="mx-auto mt-16 max-w-4xl animate-float rounded-2xl border border-white/10 bg-surface/80 p-2 shadow-2xl shadow-black/60">
+        <div class="rounded-xl bg-ink p-5 font-mono text-xs leading-6 text-slate-400 sm:text-sm">
+          <p><span class="text-brand-300">orchestrator</span> › plan("close the month books") → 4 agents</p>
+          <p><span class="text-emerald-400">researcher</span>  › pulled 128 invoices from ERP ✓</p>
+          <p><span class="text-emerald-400">analyst</span>     › reconciled 126 / flagged 2 ✓</p>
+          <p><span class="text-emerald-400">writer</span>      › drafted variance memo ✓</p>
+          <p><span class="text-amber-300">reviewer</span>    › awaiting human approval …</p>
+        </div>
+      </div>
+
+      <dl class="mx-auto mt-16 grid max-w-4xl grid-cols-2 gap-6 lg:grid-cols-4">
+        <div v-for="stat in stats" :key="stat.label"
+             class="card-ring rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-center">
+          <dt class="text-2xl font-extrabold text-white sm:text-3xl">{{ stat.value }}</dt>
+          <dd class="mt-1 text-xs font-medium uppercase tracking-wider text-slate-500">{{ stat.label }}</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+</script>
+
+<script type="text/x-template" id="tpl-logo-strip">
+  <section class="border-y border-white/5 bg-white/[0.02] py-8">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-10 gap-y-4 px-4 sm:px-6 lg:px-8">
+      <p class="w-full text-center text-xs font-semibold uppercase tracking-widest text-slate-600 sm:w-auto">
+        Running in production at
+      </p>
+      <span v-for="logo in logos" :key="logo" class="text-lg font-bold tracking-tight text-slate-500">{{ logo }}</span>
+    </div>
+  </section>
+</script>
+
+<script type="text/x-template" id="tpl-section-block">
+  <section :id="id" class="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+    <div class="mx-auto mb-12 max-w-2xl text-center">
+      <p class="text-xs font-semibold uppercase tracking-widest text-brand-400">{{ eyebrow }}</p>
+      <h2 class="mt-3 text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{{ heading }}</h2>
+      <p v-if="sub" class="mt-4 text-base leading-relaxed text-slate-400">{{ sub }}</p>
+    </div>
+    <slot></slot>
+  </section>
+</script>
+
+<script type="text/x-template" id="tpl-feature-card">
+  <article class="card-ring group rounded-2xl border border-white/10 bg-white/[0.03] p-6 transition hover:-translate-y-1 hover:border-brand-500/40 hover:bg-white/[0.06]">
+    <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-500/15 text-xl">{{ icon }}</span>
+    <h3 class="mt-5 text-lg font-semibold text-white">{{ title }}</h3>
+    <p class="mt-2 text-sm leading-relaxed text-slate-400">{{ body }}</p>
+  </article>
+</script>
+
+<script type="text/x-template" id="tpl-agent-explorer">
+  <div class="grid gap-8 lg:grid-cols-[18rem,1fr]">
+    <ul class="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible" role="tablist">
+      <li v-for="agent in agents" :key="agent.name" class="shrink-0 lg:shrink">
+        <button type="button"
+                role="tab"
+                :aria-selected="agent.name === active.name ? 'true' : 'false'"
+                class="w-full rounded-xl border px-4 py-3 text-left text-sm font-semibold transition"
+                :class="agent.name === active.name
+                  ? 'border-brand-500/50 bg-brand-500/10 text-white'
+                  : 'border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] hover:text-white'"
+                @click="active = agent">
+          <span class="mr-2">{{ agent.icon }}</span>{{ agent.name }}
+        </button>
+      </li>
+    </ul>
+
+    <article class="card-ring rounded-2xl border border-white/10 bg-white/[0.03] p-7">
+      <h3 class="text-2xl font-bold text-white">{{ active.icon }} {{ active.name }}</h3>
+      <p class="mt-3 text-base leading-relaxed text-slate-400">{{ active.summary }}</p>
+      <h4 class="mt-7 text-xs font-semibold uppercase tracking-widest text-brand-400">Handles</h4>
+      <ul class="mt-3 grid gap-2 sm:grid-cols-2">
+        <li v-for="job in active.jobs" :key="job" class="flex items-start gap-2 text-sm text-slate-300">
+          <svg class="mt-0.5 h-4 w-4 shrink-0 text-brand-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          {{ job }}
+        </li>
+      </ul>
+      <p class="mt-7 inline-flex rounded-lg border border-white/10 bg-ink px-3 py-1.5 font-mono text-xs text-slate-500">
+        tools: {{ active.tools.join(' · ') }}
+      </p>
+    </article>
+  </div>
+</script>
+
+<script type="text/x-template" id="tpl-step-card">
+  <li class="card-ring relative rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+    <span class="flex h-9 w-9 items-center justify-center rounded-full bg-brand-500 text-sm font-bold text-white">{{ index }}</span>
+    <h3 class="mt-4 text-lg font-semibold text-white">{{ title }}</h3>
+    <p class="mt-2 text-sm leading-relaxed text-slate-400">{{ body }}</p>
+  </li>
+</script>
+
+<script type="text/x-template" id="tpl-pricing-card">
+  <article class="card-ring relative flex flex-col rounded-2xl border p-7"
+           :class="featured ? 'border-brand-500/60 bg-brand-500/[0.08]' : 'border-white/10 bg-white/[0.03]'">
+    <span v-if="featured"
+          class="absolute -top-3 left-7 rounded-full bg-brand-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
+      Most popular
+    </span>
+    <h3 class="text-lg font-semibold text-white">{{ name }}</h3>
+    <p class="mt-2 text-sm text-slate-400">{{ description }}</p>
+    <p class="mt-6 flex items-baseline gap-1">
+      <span class="text-4xl font-extrabold text-white">{{ price }}</span>
+      <span class="text-sm text-slate-500">{{ cadence }}</span>
+    </p>
+    <ul class="mt-6 flex-1 space-y-3">
+      <li v-for="perk in perks" :key="perk" class="flex items-start gap-2 text-sm text-slate-300">
+        <svg class="mt-0.5 h-4 w-4 shrink-0 text-brand-400" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        {{ perk }}
+      </li>
+    </ul>
+    <button type="button"
+            class="mt-8 rounded-xl px-5 py-3 text-sm font-semibold transition"
+            :class="featured
+              ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30 hover:bg-brand-400'
+              : 'border border-white/10 bg-white/5 text-white hover:bg-white/10'"
+            @click="$emit('select', name)">
+      {{ cta }}
+    </button>
+  </article>
+</script>
+
+<script type="text/x-template" id="tpl-cta-banner">
+  <section class="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
+    <div class="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-brand-700/40 via-surface to-ink px-6 py-14 text-center sm:px-12">
+      <div class="glow pointer-events-none absolute inset-x-0 top-0 h-64"></div>
+      <div class="relative">
+        <h2 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">{{ title }}</h2>
+        <p class="mx-auto mt-4 max-w-xl text-base text-slate-300">{{ body }}</p>
+        <a href="#top"
+           class="mt-8 inline-block rounded-xl bg-white px-6 py-3 text-base font-semibold text-ink transition hover:bg-slate-200">
+          {{ action }}
+        </a>
+      </div>
+    </div>
+  </section>
+</script>
+
+<script type="text/x-template" id="tpl-site-footer">
+  <footer class="border-t border-white/5 bg-white/[0.02]">
+    <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+      <div class="grid gap-10 md:grid-cols-[1.5fr,repeat(3,1fr)]">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-extrabold text-white">S</span>
+            <span class="text-lg font-bold tracking-tight text-white">{{ brand }}</span>
+          </div>
+          <p class="mt-4 max-w-sm text-sm leading-relaxed text-slate-500">
+            Multi-agent automation for teams that would rather review outcomes than do the work.
+          </p>
+        </div>
+        <div v-for="column in columns" :key="column.title">
+          <h3 class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ column.title }}</h3>
+          <ul class="mt-4 space-y-2">
+            <li v-for="item in column.items" :key="item">
+              <a href="#top" class="text-sm text-slate-500 transition hover:text-white">{{ item }}</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <p class="mt-12 border-t border-white/5 pt-6 text-xs text-slate-600">
+        © {{ year }} {{ brand }}. All rights reserved.
+      </p>
+    </div>
+  </footer>
+</script>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- App                                                                 -->
+<!-- ------------------------------------------------------------------ -->
+<script>
+  const { createApp, ref } = Vue;
+
+  const app = createApp({
+    data() {
+      return {
+        selectedPlan: '',
+        nav: [
+          { label: 'Platform', href: '#features' },
+          { label: 'Agents', href: '#agents' },
+          { label: 'How it works', href: '#how' },
+          { label: 'Pricing', href: '#pricing' }
+        ],
+        heroStats: [
+          { value: '40+', label: 'Prebuilt agents' },
+          { value: '12x', label: 'Faster handoffs' },
+          { value: '99.2%', label: 'Task success' },
+          { value: '24/7', label: 'Always running' }
+        ],
+        logos: ['Northwind', 'Cobalt', 'Helio', 'Quartz Labs', 'Peregrine'],
+        features: [
+          { icon: '🧭', title: 'Plan-first orchestration', body: 'The orchestrator decomposes a goal into a dependency graph and assigns each node to the agent best suited for it.' },
+          { icon: '🔌', title: 'Tools, not guesses', body: 'Agents call your real systems — HTTP, SQL, S3, Slack, Jira — through typed tool contracts with scoped credentials.' },
+          { icon: '🧠', title: 'Shared memory', body: 'A single run-scoped memory keeps every agent on the same facts, so nothing is re-discovered or contradicted.' },
+          { icon: '🛡️', title: 'Guardrails & approvals', body: 'Policy checks run before any write. Risky steps pause for a human and resume exactly where they stopped.' },
+          { icon: '🔍', title: 'Replayable traces', body: 'Every prompt, tool call and decision is recorded. Replay a run step by step to see why an agent did what it did.' },
+          { icon: '📈', title: 'Cost & quality budgets', body: 'Cap tokens, latency and spend per run. Swarmline downgrades or escalates models to stay inside the budget.' }
+        ],
+        agents: [
+          { name: 'Orchestrator', icon: '🧭', summary: 'Owns the plan. Splits the goal into tasks, assigns them, watches for failures and re-plans when reality disagrees with the plan.', jobs: ['Goal decomposition', 'Agent routing', 'Retry & re-planning', 'Run budgets'], tools: ['planner', 'scheduler', 'state-store'] },
+          { name: 'Researcher', icon: '🔎', summary: 'Gathers the raw material. Pulls from internal systems and the open web, then normalises everything into the shared memory.', jobs: ['Document retrieval', 'API & DB extraction', 'Web search', 'Source citation'], tools: ['http', 'sql', 'vector-search'] },
+          { name: 'Analyst', icon: '📊', summary: 'Turns collected data into decisions — reconciles records, computes metrics and flags the handful of rows a human should actually look at.', jobs: ['Reconciliation', 'Anomaly detection', 'Metric rollups', 'Exception triage'], tools: ['python', 'sql', 'charting'] },
+          { name: 'Operator', icon: '⚙️', summary: 'Does the writes. Creates tickets, updates records and triggers downstream jobs — always behind the policy layer.', jobs: ['CRM & ERP updates', 'Ticket creation', 'File delivery', 'Webhook triggers'], tools: ['http', 'jira', 'slack'] },
+          { name: 'Reviewer', icon: '✅', summary: 'The last gate. Re-checks the output against the original goal and the policy set, and escalates to a human when confidence is low.', jobs: ['Output verification', 'Policy checks', 'Human escalation', 'Run sign-off'], tools: ['evaluator', 'policy-engine', 'approvals'] }
+        ],
+        steps: [
+          { title: 'Describe the outcome', body: 'Write the goal in plain language, or fire it from an API call, a schedule or an inbound webhook.' },
+          { title: 'The swarm plans', body: 'The orchestrator builds a task graph and picks the agents, tools and models each node needs.' },
+          { title: 'Agents execute', body: 'Work runs in parallel against your real systems, with shared memory keeping every agent consistent.' },
+          { title: 'Verify and hand off', body: 'The reviewer checks the result, routes anything risky to a human, and delivers the finished output.' }
+        ],
+        plans: [
+          { name: 'Starter', price: '$0', cadence: '/month', description: 'For a first automation and a small team.', perks: ['1 swarm', '500 agent runs / month', 'Prebuilt agent library', 'Community support'], featured: false, cta: 'Start free' },
+          { name: 'Team', price: '$249', cadence: '/month', description: 'For operations teams running daily work.', perks: ['Unlimited swarms', '25k agent runs / month', 'Custom tools & agents', 'Approval workflows', 'Trace retention 90 days'], featured: true, cta: 'Start 14-day trial' },
+          { name: 'Enterprise', price: 'Custom', cadence: '', description: 'For regulated and high-volume environments.', perks: ['Private deployment / VPC', 'SSO, SCIM, audit log', 'Custom policy engine', 'Dedicated solutions engineer', 'SLA 99.9%'], featured: false, cta: 'Talk to sales' }
+        ],
+        footerColumns: [
+          { title: 'Product', items: ['Platform', 'Agents', 'Pricing', 'Changelog'] },
+          { title: 'Developers', items: ['Docs', 'API reference', 'Tool SDK', 'Status'] },
+          { title: 'Company', items: ['About', 'Careers', 'Security', 'Contact'] }
+        ]
+      };
+    },
+    methods: {
+      selectPlan(name) {
+        this.selectedPlan = name;
+      }
+    }
+  });
+
+  /* ---- Reusable presentational components ---- */
+
+  app.component('site-nav', {
+    template: '#tpl-site-nav',
+    props: {
+      brand: { type: String, required: true },
+      links: { type: Array, default: () => [] }
+    },
+    setup() {
+      return { open: ref(false) };
+    }
+  });
+
+  app.component('hero-section', {
+    template: '#tpl-hero-section',
+    props: {
+      eyebrow: String,
+      title: String,
+      subtitle: String,
+      stats: { type: Array, default: () => [] }
+    }
+  });
+
+  app.component('logo-strip', {
+    template: '#tpl-logo-strip',
+    props: { logos: { type: Array, default: () => [] } }
+  });
+
+  app.component('section-block', {
+    template: '#tpl-section-block',
+    props: {
+      id: String,
+      eyebrow: String,
+      heading: String,
+      sub: String
+    }
+  });
+
+  app.component('feature-card', {
+    template: '#tpl-feature-card',
+    props: { icon: String, title: String, body: String }
+  });
+
+  app.component('agent-explorer', {
+    template: '#tpl-agent-explorer',
+    props: { agents: { type: Array, required: true } },
+    data() {
+      return { active: this.agents[0] };
+    }
+  });
+
+  app.component('step-card', {
+    template: '#tpl-step-card',
+    props: { index: Number, title: String, body: String }
+  });
+
+  app.component('pricing-card', {
+    template: '#tpl-pricing-card',
+    props: {
+      name: String,
+      price: String,
+      cadence: { type: String, default: '' },
+      description: String,
+      perks: { type: Array, default: () => [] },
+      featured: { type: Boolean, default: false },
+      cta: { type: String, default: 'Get started' }
+    },
+    emits: ['select']
+  });
+
+  app.component('cta-banner', {
+    template: '#tpl-cta-banner',
+    props: { title: String, body: String, action: String }
+  });
+
+  app.component('site-footer', {
+    template: '#tpl-site-footer',
+    props: {
+      brand: String,
+      columns: { type: Array, default: () => [] }
+    },
+    computed: {
+      year() {
+        return new Date().getFullYear();
+      }
+    }
+  });
+
+  app.mount('#app');
+</script>
+</body>
+</html>
