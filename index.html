@@ -5,6 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Orchestra — Multi-Agent Automation Platform</title>
   <meta name="description" content="Orchestra lets teams design, run and supervise fleets of AI agents that plan, call tools and finish real work end to end." />
+  <meta name="theme-color" content="#070A14" />
+
+  <!-- Social cards. Add og:url, og:image and a canonical <link> once the production domain is live. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Orchestra" />
+  <meta property="og:title" content="Orchestra — Multi-Agent Automation Platform" />
+  <meta property="og:description" content="Design, run and supervise fleets of AI agents that plan, call your real tools and finish work end to end." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Orchestra — Multi-Agent Automation Platform" />
+  <meta name="twitter:description" content="Design, run and supervise fleets of AI agents that plan, call your real tools and finish work end to end." />
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%233563f6'/%3E%3Cpath d='M5 18V6m0 12h14M9.5 14l3-4 3 3 3.5-5' fill='none' stroke='%2336E0C0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Orchestra",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "Multi-agent automation platform for teams: plan work, split it across specialised agents, call real tools and keep a supervisor in the loop.",
+      "offers": [
+        { "@type": "Offer", "name": "Builder", "price": "0", "priceCurrency": "USD" },
+        { "@type": "Offer", "name": "Team", "price": "79", "priceCurrency": "USD" }
+      ]
+    }
+  </script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -40,6 +67,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     [v-cloak] { display: none; }
+    /* The nav is sticky, so anchor jumps must stop short of it instead of sliding under it. */
+    section[id], main { scroll-margin-top: 5.5rem; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto !important; }
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+      }
+    }
     .grid-bg {
       background-image:
         radial-gradient(60rem 40rem at 70% -10%, rgba(53,99,246,.25), transparent 60%),
@@ -52,10 +89,21 @@
 </head>
 
 <body class="bg-ink text-slate-200 font-sans antialiased">
+  <a href="#main"
+     class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-brand-500 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white">
+    Skip to content
+  </a>
+
+  <noscript>
+    <div class="border-b border-white/10 bg-panel px-6 py-4 text-center text-sm text-slate-300">
+      Orchestra needs JavaScript to render this page. Please enable it and reload.
+    </div>
+  </noscript>
+
   <div id="app" v-cloak>
     <site-nav :links="nav.links" :brand="brand"></site-nav>
 
-    <main>
+    <main id="main">
       <hero-section
         :eyebrow="hero.eyebrow"
         :title="hero.title"
@@ -165,7 +213,7 @@
       </cta-banner>
     </main>
 
-    <site-footer :brand="brand" :columns="footer.columns" :note="footer.note"></site-footer>
+    <site-footer :brand="brand" :columns="footer.columns" :legal="footer.legal" :note="footer.note"></site-footer>
   </div>
 
   <script>
@@ -300,7 +348,13 @@
           },
 
           footer: {
-            note: '© 2025 Orchestra Labs. All rights reserved.',
+            note: `© ${new Date().getFullYear()} Orchestra Labs. All rights reserved.`,
+            legal: [
+              { label: 'Privacy', href: '#' },
+              { label: 'Terms', href: '#' },
+              { label: 'Security', href: '#' },
+              { label: 'Status', href: '#' }
+            ],
             columns: [
               { title: 'Product', links: [{ label: 'Platform', href: '#features' }, { label: 'Agents', href: '#agents' }, { label: 'Pricing', href: '#pricing' }] },
               { title: 'Resources', links: [{ label: 'How it works', href: '#how-it-works' }, { label: 'Customers', href: '#customers' }, { label: 'Changelog', href: '#' }] },
@@ -392,10 +446,18 @@
     app.component('site-nav', {
       props: { links: { type: Array, required: true }, brand: { type: Object, required: true } },
       data: () => ({ open: false }),
+      methods: {
+        onKeydown(event) {
+          if (event.key === 'Escape') this.open = false;
+        }
+      },
+      mounted() { document.addEventListener('keydown', this.onKeydown); },
+      unmounted() { document.removeEventListener('keydown', this.onKeydown); },
       template: `
         <header class="sticky top-0 z-50 border-b border-white/10 bg-ink/80 backdrop-blur-xl">
           <nav class="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4" aria-label="Main">
-            <a href="#" class="flex items-center gap-2.5">
+            <a href="#" aria-label="Orchestra home"
+               class="flex items-center gap-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
               <span class="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-brand-400 to-accent text-ink">
                 <app-icon name="graph" size="h-5 w-5" />
               </span>
@@ -405,24 +467,25 @@
             <ul class="hidden items-center gap-1 lg:flex">
               <li v-for="link in links" :key="link.href">
                 <a :href="link.href"
-                   class="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white">
+                   class="rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">
                   {{ link.label }}
                 </a>
               </li>
             </ul>
 
             <div class="hidden items-center gap-3 lg:flex">
-              <a href="#" class="text-sm font-medium text-slate-300 transition hover:text-white">Sign in</a>
+              <a href="#" class="rounded-lg text-sm font-medium text-slate-300 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">Sign in</a>
               <app-button href="#pricing" with-icon>Get started</app-button>
             </div>
 
-            <button type="button" class="rounded-lg p-2 text-slate-200 ring-1 ring-white/15 lg:hidden"
-                    :aria-expanded="open" aria-label="Toggle navigation" @click="open = !open">
+            <button type="button"
+                    class="rounded-lg p-2 text-slate-200 ring-1 ring-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 lg:hidden"
+                    :aria-expanded="open" aria-controls="mobile-nav" aria-label="Toggle navigation" @click="open = !open">
               <app-icon :name="open ? 'close' : 'menu'" />
             </button>
           </nav>
 
-          <div v-show="open" class="border-t border-white/10 px-6 pb-6 pt-2 lg:hidden">
+          <div id="mobile-nav" v-show="open" class="border-t border-white/10 px-6 pb-6 pt-2 lg:hidden">
             <ul class="space-y-1">
               <li v-for="link in links" :key="link.href">
                 <a :href="link.href" @click="open = false"
@@ -572,12 +635,22 @@
     app.component('pricing-card', {
       props: { plan: { type: Object, required: true }, billing: { type: String, required: true } },
       computed: {
+        isCustom() { return this.plan.monthly === null; },
+        isFree() { return this.plan.monthly === 0; },
         price() {
-          const amount = this.billing === 'yearly' ? this.plan.yearly : this.plan.monthly;
-          return amount === null ? 'Custom' : '$' + amount;
+          if (this.isCustom) return 'Custom';
+          if (this.isFree) return 'Free';
+          return '$' + (this.billing === 'yearly' ? this.plan.yearly : this.plan.monthly);
         },
         suffix() {
-          return this.plan.monthly === null ? '' : '/ month';
+          return this.isCustom || this.isFree ? '' : '/ month';
+        },
+        billingNote() {
+          if (this.isCustom) return 'Annual agreement, priced on volume';
+          if (this.isFree) return 'Free forever — no credit card';
+          return this.billing === 'yearly'
+            ? 'Billed annually at $' + this.plan.yearly * 12
+            : 'Billed monthly, cancel anytime';
         }
       },
       template: `
@@ -593,6 +666,7 @@
             <span class="text-4xl font-extrabold tracking-tight text-white">{{ price }}</span>
             <span class="text-sm text-slate-400">{{ suffix }}</span>
           </p>
+          <p class="mt-1.5 text-xs text-slate-500">{{ billingNote }}</p>
           <app-button :variant="plan.featured ? 'accent' : 'ghost'" class="mt-6 w-full">
             {{ plan.cta }}
           </app-button>
@@ -640,7 +714,7 @@
     });
 
     app.component('site-footer', {
-      props: { brand: Object, columns: Array, note: String },
+      props: { brand: Object, columns: Array, legal: Array, note: String },
       template: `
         <footer class="border-t border-white/10 bg-panel/40">
           <div class="mx-auto grid max-w-7xl gap-10 px-6 py-14 md:grid-cols-[2fr_repeat(3,1fr)]">
@@ -657,13 +731,22 @@
               <h3 class="text-sm font-semibold text-white">{{ column.title }}</h3>
               <ul class="mt-4 space-y-2.5">
                 <li v-for="link in column.links" :key="link.label">
-                  <a :href="link.href" class="text-sm text-slate-400 transition hover:text-white">{{ link.label }}</a>
+                  <a :href="link.href"
+                     class="rounded text-sm text-slate-400 transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">{{ link.label }}</a>
                 </li>
               </ul>
             </div>
           </div>
           <div class="border-t border-white/10 px-6 py-6">
-            <p class="mx-auto max-w-7xl text-xs text-slate-500">{{ note }}</p>
+            <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 text-xs text-slate-500 sm:flex-row">
+              <p>{{ note }}</p>
+              <ul class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+                <li v-for="link in legal" :key="link.label">
+                  <a :href="link.href"
+                     class="rounded transition hover:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400">{{ link.label }}</a>
+                </li>
+              </ul>
+            </div>
           </div>
         </footer>`
     });
