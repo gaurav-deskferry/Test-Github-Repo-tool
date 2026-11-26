@@ -44,3 +44,8 @@ Risks: NativeWind 4 / Tailwind 3 pinning; Reanimated + worklets native versions 
 5. `src/components/tw/*`: `cssInterop` wrappers for Link and Image; View/Text are re-exports that rely on babel `jsxImportSource: "nativewind"` for `className`.
 6. `src/app/_layout.tsx` (Stack, status bar) and `src/app/index.tsx` using only `className`.
 7. Verify: `tsc --noEmit`, `expo export --platform web`, browser screenshot/video of the web build.
+
+## Testing in the browser (Expo web)
+`npm run web` serves the app at http://localhost:8081 (Metro + react-native-web), so UI can be checked and automated
+(Playwright) without a simulator. `tailwind.config.js` sets `darkMode: "class"`; with the default `media` mode NativeWind 4
+throws "Cannot manually set color scheme" on web and an error overlay blocks all clicks.
