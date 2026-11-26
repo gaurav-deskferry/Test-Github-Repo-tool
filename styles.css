@@ -21,8 +21,10 @@ h2{font-size:24px;margin-bottom:16px}
 .card .cover{margin-bottom:12px}
 .card h3{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card p{font-size:13px;color:#b3b3b3;margin-top:4px}
-.card .pbtn{position:absolute;right:22px;top:calc(14px + 100px);width:44px;height:44px;border-radius:50%;background:#1db954;color:#000;border:0;font-size:16px;opacity:0;transform:translateY(10px);transition:.3s}
-.card:hover .pbtn{opacity:1;transform:none}
+.cw{position:relative}
+.card:focus-visible,.song:focus-visible,.controls button:focus-visible,#search:focus-visible{outline:2px solid #1db954;outline-offset:2px}
+.card .pbtn{display:grid;place-items:center;position:absolute;right:8px;bottom:8px;width:44px;height:44px;border-radius:50%;background:#1db954;color:#000;border:0;font-size:16px;opacity:0;transform:translateY(10px);transition:.3s}
+.card:hover .pbtn,.card:focus-visible .pbtn,.card:focus-within .pbtn{opacity:1;transform:none}
 .list-head,.song{display:grid;grid-template-columns:40px 1fr 1fr 60px;gap:12px;align-items:center;padding:10px 12px}
 .list-head{color:#b3b3b3;font-size:13px;border-bottom:1px solid #333}
 ol{list-style:none}
@@ -47,5 +49,5 @@ ol{list-style:none}
 .player.on #barFill{animation:fill 30s linear forwards}
 .player.paused #barFill{animation-play-state:paused}
 @keyframes fill{to{width:100%}}
-@media(max-width:700px){body{padding-left:0}.sidebar{display:none}.player{left:0}.list-head span:nth-child(3),.song .al{display:none}.list-head,.song{grid-template-columns:30px 1fr 50px}}
+@media(max-width:700px){body{padding-left:0}.sidebar{position:static;width:auto;display:flex;align-items:center;gap:14px;padding:12px 16px;overflow-x:auto}.logo{margin:0 8px 0 0;font-size:18px}.sidebar nav{display:flex;gap:14px}.sidebar nav a{padding:4px 0;white-space:nowrap}.player{left:0;grid-template-columns:minmax(0,1fr) auto;padding:0 12px}.now>div:last-child{min-width:0}.now strong,.now small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}main{padding:0 16px 40px}.list-head span:nth-child(3),.song .al{display:none}.list-head,.song{grid-template-columns:30px 1fr 50px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.reveal,.song,.card{opacity:1;transform:none}}
