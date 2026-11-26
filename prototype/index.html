@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Riverside Clinic — Prototype (fake data)</title>
+<style>
+  :root{--teal:#0f766e;--teal-d:#0b5a54;--bg:#f4f7f8;--card:#fff;--line:#d9e2e5;--txt:#1b2b30;--mut:#64767c;--red:#c0392b;--amber:#b7791f;--green:#2f855a;--blue:#2b6cb0}
+  *{box-sizing:border-box}
+  body{margin:0;font:16px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--txt)}
+  header{background:var(--teal);color:#fff;padding:10px 20px;display:flex;align-items:center;gap:16px}
+  header h1{font-size:18px;margin:0;flex:1}
+  header .who{font-size:14px;opacity:.9}
+  main{max-width:960px;margin:20px auto;padding:0 16px}
+  .banner{background:#fff8e1;border:1px solid #f1d98a;color:#6b5200;padding:8px 14px;font-size:13px;text-align:center}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:16px}
+  h2{margin:0 0 12px;font-size:20px} h3{margin:14px 0 8px;font-size:15px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+  button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer}
+  button:hover:not(:disabled){border-color:var(--teal)}
+  button.primary{background:var(--teal);border-color:var(--teal);color:#fff} button.primary:hover:not(:disabled){background:var(--teal-d)}
+  button.danger{color:var(--red);border-color:#e6b8b2}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  input,select{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;width:100%}
+  label{display:block;font-size:14px;color:var(--mut);margin:10px 0 4px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap} .grow{flex:1}
+  .appt{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .appt:last-child{border:0}
+  .tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;color:#fff;background:var(--mut)}
+  .Booked{background:var(--blue)} .Arrived{background:var(--green)} .Done{background:#718096} .NoShow{background:var(--red)} .Cancelled{background:#a0aec0} .Extra{background:var(--amber)}
+  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+  .days .dh{font-size:12px;color:var(--mut)}
+  .day{padding:8px 0;border-radius:8px;border:1px solid transparent;background:#f0f4f5}
+  .day.off{background:transparent;color:#b5c0c4;cursor:not-allowed;text-decoration:line-through}
+  .day.sel{background:var(--teal);color:#fff}
+  .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+  .slot.taken{background:#eceff1;color:#a5b0b5;text-decoration:line-through;cursor:not-allowed}
+  .slot.sel{background:var(--teal);color:#fff;border-color:var(--teal)}
+  .msg{padding:10px 14px;border-radius:8px;margin:10px 0;font-size:14px}
+  .msg.err{background:#fdecea;color:#8a2a20;border:1px solid #f1b8b1} .msg.ok{background:#e6f6ee;color:#1f6b45;border:1px solid #a9dcc1} .msg.info{background:#eaf2fb;color:#244f80;border:1px solid #b9d3ee}
+  table{width:100%;border-collapse:collapse;font-size:14px} th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+  th{background:#eef3f4} td.free{color:#9aa9ae;cursor:pointer} td.free:hover{background:#e7f5f3}
+  td.leave{background:repeating-linear-gradient(45deg,#eee,#eee 6px,#f8f8f8 6px,#f8f8f8 12px);color:#888}
+  td.cell{cursor:pointer}
+  .login{max-width:420px;margin:40px auto}
+  .roles{display:grid;gap:8px;margin-top:12px}
+  .muted{color:var(--mut);font-size:14px}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1b2b30;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;z-index:9}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:8}
+  .modal .card{max-width:380px;margin:0}
+</style>
+</head>
+<body>
+<div class="banner">PROTOTYPE — fake data, nothing is saved. Reload the page to reset.</div>
+<header>
+  <h1>🩺 Riverside Clinic</h1>
+  <span class="who" id="who"></span>
+  <button id="signout" style="display:none" onclick="signOut()">Sign out</button>
+</header>
+<main id="app"></main>
+<div id="overlay"></div>
+
+<script>
+// ---------- fake data ----------
+const DOCTORS = [{id:'rao',name:'Dr Rao',spec:'General'},{id:'lee',name:'Dr Lee',spec:'General'},{id:'kim',name:'Dr Kim',spec:'Paediatrics',leave:true}];
+const PATIENTS = ['Anna Lopez','Ben Ito','Cara Smith','Dan Wu'];
+const TIMES = ['09:00','09:20','09:40','10:00','10:20','10:40','11:00','11:20','11:40','12:00','13:30','13:50','14:10','14:30','14:50','15:10','15:30','15:50','16:10','16:30'];
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const iso = d => d.toISOString().slice(0,10);
+const addDays = (d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const fmt = (s)=>new Date(s+'T00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+let nextId = 100;
+let appts = [
+  {id:1,pat:'Anna Lopez',doc:'rao',date:iso(addDays(TODAY,1)),time:'10:20',status:'Booked',reason:'Cough'},
+  {id:2,pat:'Anna Lopez',doc:'lee',date:iso(addDays(TODAY,-20)),time:'09:00',status:'Done',reason:'Check-up'},
+  {id:3,pat:'Ben Ito',doc:'rao',date:iso(TODAY),time:'09:20',status:'Arrived',reason:'Check-up'},
+  {id:4,pat:'Cara Smith',doc:'lee',date:iso(TODAY),time:'09:20',status:'Booked',reason:'Rash'},
+  {id:5,pat:'Dan Wu',doc:'lee',date:iso(TODAY),time:'09:40',status:'NoShow',reason:'Back pain'},
+  {id:6,pat:'Anna Lopez',doc:'rao',date:iso(TODAY),time:'09:00',status:'Done',reason:'Follow-up'},
+  {id:7,pat:'Ben Ito',doc:'rao',date:iso(addDays(TODAY,1)),time:'09:00',status:'Booked',reason:'Flu'},
+];
+const docName = id => DOCTORS.find(d=>d.id===id).name;
+const active = a => a.status==='Booked'||a.status==='Arrived';
+const isWeekend = d => d.getDay()===0||d.getDay()===6;
+const taken = (doc,date,time) => appts.some(a=>a.doc===doc&&a.date===date&&a.time===time&&active(a));
+const dayOk = (doc,d) => d>=TODAY && d<=addDays(TODAY,60) && !isWeekend(d) && !DOCTORS.find(x=>x.id===doc).leave;
+
+// ---------- state ----------
+let S = {role:null, user:null, screen:'login', book:null, msg:null};
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function go(screen, extra){ S.screen=screen; Object.assign(S, extra||{}); render(); }
+function toast(t){ const e=document.createElement('div'); e.className='toast'; e.textContent=t; document.body.appendChild(e); setTimeout(()=>e.remove(),2200); }
+function signOut(){ S={role:null,user:null,screen:'login',book:null,msg:null}; render(); }
+function signIn(role){
+  const user = {patient:'Anna Lopez',reception:'Sam (Reception)',doctor:'Dr Rao'}[role];
+  S.role=role; S.user=user; S.msg=null;
+  go(role==='patient'?'p-home':role==='reception'?'r-board':'d-day',{date:iso(TODAY)});
+}
+function confirmDialog(text, yes, onYes){
+  $('overlay').innerHTML=`<div class="modal"><div class="card"><h2>Are you sure?</h2><p>${esc(text)}</p><div class="row"><button onclick="closeDlg()">Keep it</button><button class="danger" id="dlgyes">${esc(yes)}</button></div></div></div>`;
+  $('dlgyes').onclick=()=>{closeDlg();onYes();};
+}
+function closeDlg(){ $('overlay').innerHTML=''; }
+const withinWindow = a => (new Date(a.date+'T'+a.time) - new Date()) < 2*3600*1000;
+
+// ---------- screens ----------
+function render(){
+  $('who').textContent = S.user ? `${S.user} · ${S.role}` : '';
+  $('signout').style.display = S.user ? '' : 'none';
+  const f = {login,'p-home':pHome,book:bookScreen,confirm:confirmScreen,done:doneScreen,'r-board':rBoard,walkin:walkinScreen,'d-day':dDay,detail:detailScreen}[S.screen];
+  $('app').innerHTML = f();
+}
+
+function login(){ return `<div class="card login"><h2>Sign in</h2>
+  <p class="muted">Prototype: pick a role to look around.</p>
+  <label>Email</label><input value="anna@example.com" disabled><label>Password</label><input type="password" value="••••••" disabled>
+  <div class="roles">
+   <button class="primary" onclick="signIn('patient')">Sign in as Patient (Anna)</button>
+   <button onclick="signIn('reception')">Sign in as Receptionist</button>
+   <button onclick="signIn('doctor')">Sign in as Doctor (Dr Rao)</button>
+  </div></div>`; }
+
+// Patient home
+function pHome(){
+  const mine = appts.filter(a=>a.pat==='Anna Lopez').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const up = mine.filter(a=>active(a)&&new Date(a.date+'T'+a.time)>=new Date()), past = mine.filter(a=>!up.includes(a));
+  const row = (a,acts)=>`<div class="appt"><div><b>${fmt(a.date)} ${a.time}</b> · ${docName(a.doc)} <span class="tag ${a.status}">${a.status==='NoShow'?'No-show':a.status}</span><div class="muted">${esc(a.reason||'')}</div></div><div class="row">${acts?`<button onclick="startBook(${a.id})">Reschedule</button><button class="danger" onclick="cancelAppt(${a.id})">Cancel</button>`:''}</div></div>`;
+  return `${msg()}<div class="card"><div class="row"><h2 class="grow">Hello, Anna</h2><button class="primary" onclick="startBook()">Book appointment</button></div>
+   <h3>Upcoming</h3>${up.length?up.map(a=>row(a,true)).join(''):'<p class="muted">You have no upcoming appointments.</p>'}
+   <h3>Past</h3>${past.map(a=>row(a,false)).join('')||'<p class="muted">Nothing yet.</p>'}</div>`;
+}
+function msg(){ const m=S.msg; S.msg=null; return m?`<div class="msg ${m.t}">${esc(m.x)}</div>`:''; }
+function cancelAppt(id){
+  const a=appts.find(x=>x.id===id);
+  if(S.role==='patient' && withinWindow(a)){ S.msg={t:'err',x:'This is less than 2 hours away. Please call the clinic to cancel.'}; return render(); }
+  confirmDialog(`Cancel ${fmt(a.date)} ${a.time} with ${docName(a.doc)}?`,'Yes, cancel',()=>{a.status='Cancelled';S.msg={t:'ok',x:'Appointment cancelled. The time is free again.'};render();});
+}
+
+// Booking
+function startBook(rescheduleId, preset){
+  const a = rescheduleId && appts.find(x=>x.id===rescheduleId);
+  if(a && S.role==='patient' && withinWindow(a)){ S.msg={t:'err',x:'Too close to the start time to move online. Please call the clinic.'}; return render(); }
+  let d = addDays(TODAY,1); while(isWeekend(d)) d=addDays(d,1);
+  S.book = Object.assign({doc:a?a.doc:'rao',date:iso(d),time:null,month:new Date(TODAY.getFullYear(),TODAY.getMonth(),1),resched:a||null,pat:S.role==='patient'?'Anna Lopez':PATIENTS[0],reason:a?a.reason:''},preset||{});
+  go('book');
+}
+function bookScreen(){
+  const b=S.book, d0=b.month, first=(d0.getDay()+6)%7; // Monday first
+  const dim=new Date(d0.getFullYear(),d0.getMonth()+1,0).getDate();
+  let cells=''; for(let i=0;i<first;i++) cells+='<div></div>';
+  for(let n=1;n<=dim;n++){ const d=new Date(d0.getFullYear(),d0.getMonth(),n), ok=dayOk(b.doc,d), s=iso(d);
+    cells+=`<button class="day ${ok?'':'off'} ${s===b.date?'sel':''}" ${ok?`onclick="pickDate('${s}')"`:'disabled'}>${n}</button>`; }
+  const doc=DOCTORS.find(x=>x.id===b.doc), dayDate=new Date(b.date+'T00:00');
+  const dayIsOk=dayOk(b.doc,dayDate);
+  const free=TIMES.filter(t=>!taken(b.doc,b.date,t)).length;
+  let slots;
+  if(doc.leave) slots=`<div class="msg info">${doc.name} is on leave. Please choose another doctor.</div>`;
+  else if(!dayIsOk) slots=`<div class="msg info">The clinic is closed or the date is unavailable.</div>`;
+  else if(!free) slots=`<div class="msg info">No free times on this day. <button onclick="nextFree()">Go to next free day</button></div>`;
+  else slots=`<div class="slots">${TIMES.map(t=>{const tk=taken(b.doc,b.date,t);return `<button class="slot ${tk?'taken':''} ${t===b.time?'sel':''}" ${tk?'disabled':`onclick="pickTime('${t}')"`}>${t}</button>`}).join('')}</div>`;
+  const resched = b.resched;
+  return `<div class="card"><h2>${resched?`Move appointment (now ${fmt(resched.date)} ${resched.time})`:'Book an appointment'}</h2>
+   ${S.role!=='patient'?`<label>Patient</label><select onchange="S.book.pat=this.value">${PATIENTS.map(p=>`<option ${p===b.pat?'selected':''}>${p}</option>`).join('')}</select>`:''}
+   <label>1 · Doctor</label><select onchange="S.book.doc=this.value;S.book.time=null;render()">${DOCTORS.map(x=>`<option value="${x.id}" ${x.id===b.doc?'selected':''}>${x.name} — ${x.spec}${x.leave?' (on leave)':''}</option>`).join('')}</select>
+   <label>2 · Date</label>
+   <div class="row" style="justify-content:space-between"><button onclick="moveMonth(-1)">‹</button><b>${d0.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</b><button onclick="moveMonth(1)">›</button></div>
+   <div class="days" style="margin-top:8px">${['Mo','Tu','We','Th','Fr','Sa','Su'].map(x=>`<div class="dh">${x}</div>`).join('')}${cells}</div>
+   <label>3 · Time — ${fmt(b.date)}</label>${slots}
+   <div class="row" style="margin-top:16px"><button onclick="backHome()">${resched?'Keep original':'Back'}</button><span class="grow"></span>
+   <button class="primary" ${b.time?'':'disabled'} onclick="go('confirm')">Continue</button></div></div>`;
+}
+function backHome(){ go(S.role==='patient'?'p-home':'r-board',{date:iso(TODAY)}); }
+function moveMonth(n){ const m=S.book.month; S.book.month=new Date(m.getFullYear(),m.getMonth()+n,1); render(); }
+function pickDate(s){ S.book.date=s; S.book.time=null; render(); }
+function pickTime(t){ S.book.time=t; render(); }
+function nextFree(){ let d=new Date(S.book.date+'T00:00'); for(let i=0;i<60;i++){ d=addDays(d,1); if(dayOk(S.book.doc,d)&&TIMES.some(t=>!taken(S.book.doc,iso(d),t))){ S.book.date=iso(d); S.book.month=new Date(d.getFullYear(),d.getMonth(),1); break; } } render(); }
+function confirmScreen(){
+  const b=S.book, end=(()=>{const [h,m]=b.time.split(':').map(Number);const t=h*60+m+20;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')})();
+  return `<div class="card"><h2>Confirm</h2><p><b>${docName(b.doc)}</b> · ${fmt(b.date)} · ${b.time}–${end}${S.role!=='patient'?` · for <b>${esc(b.pat)}</b>`:''}</p>
+   <label>Reason (optional)</label><input value="${esc(b.reason)}" oninput="S.book.reason=this.value" placeholder="e.g. cough">
+   <div class="row" style="margin-top:16px"><button onclick="go('book')">Change</button><span class="grow"></span>
+   <button onclick="simulateTaken()" title="Demo only">Demo: someone else takes it</button><button class="primary" onclick="doConfirm()">${b.resched?'Confirm move':'Confirm'}</button></div></div>`;
+}
+function simulateTaken(){ const b=S.book; appts.push({id:nextId++,pat:'Someone else',doc:b.doc,date:b.date,time:b.time,status:'Booked',reason:''}); toast('Pretend another person just booked this time…'); }
+function doConfirm(){
+  const b=S.book;
+  if(new Date(b.date+'T'+b.time)<new Date()){ S.msg={t:'err',x:'That time has passed.'}; b.time=null; return go('book'); }
+  if(taken(b.doc,b.date,b.time)){ b.time=null; go('book'); const e=document.createElement('div'); e.className='msg err'; e.textContent='Sorry, this time was just taken. Please pick another.'; $('app').prepend(e); return; }
+  if(b.resched) b.resched.status='Cancelled';
+  appts.push({id:nextId++,pat:b.pat,doc:b.doc,date:b.date,time:b.time,status:'Booked',reason:b.reason});
+  go('done');
+}
+function doneScreen(){ const b=S.book; return `<div class="card"><div class="msg ok"><b>✔ ${b.resched?'Moved':'Booked'}!</b> ${fmt(b.date)} at ${b.time} with ${docName(b.doc)}.</div>
+  <p class="muted">Reminders (mock): 24 hours before and 2 hours before.</p>
+  <div class="row"><button class="primary" onclick="backHome()">${S.role==='patient'?'My appointments':'Back to day board'}</button><button onclick="startBook()">Book another</button></div></div>`; }
+
+// Receptionist board
+function rBoard(){
+  const date=S.date, drs=DOCTORS;
+  const cell=(d,t)=>{
+    if(d.leave) return `<td class="leave">On leave</td>`;
+    const a=appts.find(x=>x.doc===d.id&&x.date===date&&x.time===t&&(active(x)||x.status==='NoShow'||x.status==='Done'));
+    if(a) return `<td class="cell" onclick="go('detail',{id:${a.id}})"><b>${esc(a.pat)}</b> <span class="tag ${a.status}">${a.status==='NoShow'?'No-show':a.status}</span>${a.extra?' <span class="tag Extra">Extra</span>':''}</td>`;
+    return `<td class="free" onclick="startBook(null,{doc:'${d.id}',date:'${date}',time:'${t}',month:new Date('${date}T00:00')});S.book.month=new Date(S.book.month.getFullYear(),S.book.month.getMonth(),1);render()">free</td>`;
+  };
+  const wk=isWeekend(new Date(date+'T00:00'));
+  return `${msg()}<div class="card"><div class="row"><button onclick="shiftDay(-1)">‹</button><b>${fmt(date)}</b><button onclick="shiftDay(1)">›</button><button onclick="S.date='${iso(TODAY)}';render()">Today</button><span class="grow"></span><button onclick="go('walkin')">Add walk-in</button><button class="primary" onclick="startBook()">Book for patient</button></div>
+   ${wk?'<div class="msg info">The clinic is closed on this day.</div>':`<div style="overflow:auto;margin-top:12px"><table><tr><th>Time</th>${drs.map(d=>`<th>${d.name}</th>`).join('')}</tr>${TIMES.slice(0,10).map(t=>`<tr><td>${t}</td>${drs.map(d=>cell(d,t)).join('')}</tr>`).join('')}</table></div><p class="muted">Showing the morning only in this prototype. Click “free” to book, a name to open it.</p>`}</div>`;
+}
+function shiftDay(n){ S.date=iso(addDays(new Date(S.date+'T00:00'),n)); render(); }
+
+function walkinScreen(){
+  const w=S.walk||(S.walk={pat:PATIENTS[0],doc:'rao'});
+  const next=TIMES.find(t=>!taken(w.doc,iso(TODAY),t));
+  return `<div class="card"><h2>Add walk-in</h2>
+   <label>Patient (search name or phone)</label><select onchange="S.walk.pat=this.value">${PATIENTS.map(p=>`<option ${p===w.pat?'selected':''}>${p}</option>`).join('')}<option>+ New patient…</option></select>
+   <label>Doctor</label><select onchange="S.walk.doc=this.value;render()">${DOCTORS.filter(d=>!d.leave).map(d=>`<option value="${d.id}" ${d.id===w.doc?'selected':''}>${d.name}</option>`).join('')}</select>
+   <p>${next?`Next free time today: <b>${next}</b>`:'<span class="msg err">No free times today for this doctor.</span>'}</p>
+   <label>Reason</label><input id="wreason" placeholder="e.g. sore throat">
+   <div class="row" style="margin-top:16px"><button onclick="S.walk=null;go('r-board')">Cancel</button><span class="grow"></span>
+   <button onclick="addWalk(true)">Add as extra</button><button class="primary" ${next?'':'disabled'} onclick="addWalk(false)">Add walk-in</button></div></div>`;
+}
+function addWalk(extra){
+  const w=S.walk, t=extra?'09:00':TIMES.find(t=>!taken(w.doc,iso(TODAY),t));
+  appts.push({id:nextId++,pat:w.pat,doc:w.doc,date:iso(TODAY),time:t,status:'Arrived',reason:$('wreason').value,extra});
+  S.walk=null; S.date=iso(TODAY); S.msg={t:'ok',x:`Walk-in added for ${w.pat} at ${t}.`}; go('r-board');
+}
+
+// Details
+function detailScreen(){
+  const a=appts.find(x=>x.id===S.id), canNote=S.role==='doctor';
+  const btn=(st,l)=>`<button onclick="setStatus('${st}')">${l}</button>`;
+  return `<div class="card"><h2>${esc(a.pat)}</h2><p>${docName(a.doc)} · ${fmt(a.date)} ${a.time} · <span class="tag ${a.status}">${a.status==='NoShow'?'No-show':a.status}</span></p>
+   <p class="muted">Reason: ${esc(a.reason||'—')}</p>
+   ${canNote?`<label>Doctor note</label><input value="${esc(a.note||'')}" oninput="appts.find(x=>x.id===S.id).note=this.value" placeholder="Visible to doctor only">`:'<p class="muted">Doctor notes are hidden from reception.</p>'}
+   <div class="row" style="margin-top:14px">${S.role==='reception'?btn('Arrived','Arrived'):''}${btn('Done','Done')}${btn('NoShow','No-show')}
+   ${S.role==='reception'?`<button onclick="startBook(${a.id})">Reschedule</button><button class="danger" onclick="cancelFromDetail()">Cancel</button>`:''}</div>
+   <p><button onclick="go(S.role==='doctor'?'d-day':'r-board')">← Back</button></p></div>`;
+}
+function setStatus(st){ const a=appts.find(x=>x.id===S.id); a.status=st; toast('Status: '+(st==='NoShow'?'No-show':st)); render(); }
+function cancelFromDetail(){ const a=appts.find(x=>x.id===S.id); confirmDialog('Cancel this appointment? (Receptionist can override the 2-hour window.)','Yes, cancel',()=>{a.status='Cancelled';S.msg={t:'ok',x:'Cancelled.'};go('r-board');}); }
+
+// Doctor
+function dDay(){
+  const date=S.date, mine=appts.filter(a=>a.doc==='rao'&&a.date===date&&a.status!=='Cancelled').sort((a,b)=>a.time.localeCompare(b.time));
+  const next=mine.find(a=>active(a));
+  return `<div class="card"><div class="row"><h2 class="grow" style="margin:0">Dr Rao</h2><button onclick="shiftDoc(-1)">‹</button><b>${fmt(date)}</b><button onclick="shiftDoc(1)">›</button><button onclick="S.date='${iso(TODAY)}';render()">Today</button></div>
+   ${next?`<div class="msg info">Next: <b>${esc(next.pat)}</b> at ${next.time} (${next.status})</div>`:''}
+   ${mine.length?mine.map(a=>`<div class="appt"><div><b>${a.time}</b> · ${esc(a.pat)} <span class="tag ${a.status}">${a.status==='NoShow'?'No-show':a.status}</span><div class="muted">${esc(a.reason||'')}</div></div>
+     <div class="row">${active(a)?`<button onclick="S.id=${a.id};setStatus('Done')">Mark done</button><button onclick="S.id=${a.id};setStatus('NoShow')">No-show</button>`:''}<button onclick="go('detail',{id:${a.id}})">Open ›</button></div></div>`).join(''):'<p class="muted">No appointments on this day. Enjoy the quiet.</p>'}</div>`;
+}
+function shiftDoc(n){ shiftDay(n); }
+
+render();
+</script>
+</body>
+</html>
