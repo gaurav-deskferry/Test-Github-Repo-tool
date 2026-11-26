@@ -6,7 +6,8 @@
 <title>Sakura Garden</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe8f5; font-family: sans-serif; }
-  canvas { display: block; cursor: grab; }
+  canvas { display: block; cursor: grab; touch-action: none; }
+  #msg { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: #333; }
   #hint { position: fixed; left: 10px; bottom: 8px; color: #555; font-size: 12px; }
 </style>
 <script type="importmap">
@@ -14,9 +15,20 @@
 </script>
 </head>
 <body>
-<div id="hint">Drag to rotate · scroll to zoom</div>
+<div id="hint">Drag to rotate · scroll or pinch to zoom</div>
 <script type="module">
-import * as THREE from "three";
+function fail(why) {
+  document.getElementById("hint").remove();
+  const m = document.createElement("div");
+  m.id = "msg";
+  m.textContent = "Sakura Garden needs WebGL and three.js (" + why + "). Please enable WebGL or check your connection and reload.";
+  document.body.appendChild(m);
+}
+let THREE;
+try { THREE = await import("three"); } catch (e) { fail("could not load three.js"); }
+if (THREE) try { start(THREE); } catch (e) { fail("WebGL unavailable"); }
+
+function start(THREE) {
 
 // Low-cost settings for CPU-only (software-rendered) browsers.
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "low-power" });
@@ -30,7 +42,7 @@ scene.fog = new THREE.Fog(0xcfe8f5, 30, 60);
 
 const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x88aa77, 1.6));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x88aa77, 1.0));
 const sun = new THREE.DirectionalLight(0xffffff, 0.7);
 sun.position.set(8, 15, 6);
 scene.add(sun);
@@ -101,19 +113,38 @@ petalGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
 scene.add(new THREE.Points(petalGeo, new THREE.PointsMaterial({ color: 0xffc0d8, size: 0.2 })));
 
 // Simple drag / wheel orbit (no extra imports)
-let yaw = 0.6, pitch = 0.5, dist = 28, dragging = false, lx = 0, ly = 0;
+let yaw = 0.6, pitch = 0.5, dist = 28;
 const el = renderer.domElement;
-el.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; });
-addEventListener("pointerup", () => { dragging = false; });
-addEventListener("pointermove", (e) => {
-  if (!dragging) return;
-  yaw -= (e.clientX - lx) * 0.005;
-  pitch = Math.min(1.4, Math.max(0.1, pitch + (e.clientY - ly) * 0.005));
-  lx = e.clientX; ly = e.clientY;
+const ptrs = new Map(); // active pointers: id -> {x, y}
+let pinch = 0;
+const clampDist = (d) => Math.min(40, Math.max(10, d));
+const pinchSpan = () => { const [a, b] = [...ptrs.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+const dragging = () => ptrs.size > 0;
+el.addEventListener("pointerdown", (e) => {
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  try { el.setPointerCapture(e.pointerId); } catch (_) {}
+  if (ptrs.size === 2) pinch = pinchSpan();
+});
+function release(e) { ptrs.delete(e.pointerId); pinch = 0; }
+["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => el.addEventListener(t, release));
+addEventListener("blur", () => { ptrs.clear(); pinch = 0; });
+el.addEventListener("pointermove", (e) => {
+  const p = ptrs.get(e.pointerId);
+  if (!p) return;
+  if (ptrs.size === 2) {
+    p.x = e.clientX; p.y = e.clientY;
+    const span = pinchSpan();
+    if (pinch > 0 && span > 0) dist = clampDist(dist * pinch / span);
+    pinch = span;
+    return;
+  }
+  yaw -= (e.clientX - p.x) * 0.005;
+  pitch = Math.min(1.4, Math.max(0.1, pitch + (e.clientY - p.y) * 0.005));
+  p.x = e.clientX; p.y = e.clientY;
 });
 el.addEventListener("wheel", (e) => {
   e.preventDefault();
-  dist = Math.min(40, Math.max(10, dist + e.deltaY * 0.02));
+  dist = clampDist(dist + e.deltaY * 0.02);
 }, { passive: false });
 
 addEventListener("resize", () => {
@@ -122,11 +153,16 @@ addEventListener("resize", () => {
   camera.updateProjectionMatrix();
 });
 
+// Cap at ~30 fps: plenty for this scene and far cheaper on software GL.
 const clock = new THREE.Clock();
+let acc = 0;
 function animate() {
   requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.1);
-  if (!dragging) yaw += dt * 0.08;
+  acc += clock.getDelta();
+  if (acc < 1 / 30) return;
+  const dt = Math.min(acc, 0.1);
+  acc = 0;
+  if (!dragging()) yaw += dt * 0.08;
   for (let i = 0; i < PETALS; i++) {
     pos[i * 3 + 1] -= speed[i] * dt;
     pos[i * 3] += Math.sin(clock.elapsedTime + i) * dt * 0.2;
@@ -142,6 +178,7 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
+}
 </script>
 </body>
 </html>
