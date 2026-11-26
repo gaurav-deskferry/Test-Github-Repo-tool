@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lumen — Feed Prototype</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar__inner">
+    <span class="logo">Lumen</span>
+    <span class="topbar__meta" id="meta" aria-live="polite"></span>
+  </div>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+</header>
+
+<main class="container">
+  <section class="feed" id="feed" aria-label="Posts"></section>
+  <nav class="pager" id="pager" aria-label="Pagination"></nav>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
