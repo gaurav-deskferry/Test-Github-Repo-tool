@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sakura Garden</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe8f5; font-family: sans-serif; }
+  canvas { display: block; cursor: grab; touch-action: none; }
+  #msg { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; text-align: center; color: #333; }
+  #hint { position: fixed; left: 10px; bottom: 8px; color: #555; font-size: 12px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="hint">Drag to rotate · scroll or pinch to zoom</div>
+<script type="module">
+function fail(why) {
+  document.getElementById("hint").remove();
+  const m = document.createElement("div");
+  m.id = "msg";
+  m.textContent = "Sakura Garden needs WebGL and three.js (" + why + "). Please enable WebGL or check your connection and reload.";
+  document.body.appendChild(m);
+}
+let THREE;
+try { THREE = await import("three"); } catch (e) { fail("could not load three.js"); }
+if (THREE) try { start(THREE); } catch (e) { fail("WebGL unavailable"); }
+
+function start(THREE) {
+
+// Low-cost settings for CPU-only (software-rendered) browsers.
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "low-power" });
+renderer.setPixelRatio(1);
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xcfe8f5);
+scene.fog = new THREE.Fog(0xcfe8f5, 30, 60);
+
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x88aa77, 1.0));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7);
+sun.position.set(8, 15, 6);
+scene.add(sun);
+
+const mat = (color) => new THREE.MeshLambertMaterial({ color, flatShading: true });
+
+// Ground
+const ground = new THREE.Mesh(new THREE.CircleGeometry(25, 24), mat(0x7bb662));
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+// Pond at the center
+const rim = new THREE.Mesh(new THREE.CylinderGeometry(4.3, 4.5, 0.1, 24), mat(0x9a9a92));
+rim.position.y = 0.05;
+scene.add(rim);
+const water = new THREE.Mesh(
+  new THREE.CircleGeometry(3.8, 24),
+  new THREE.MeshBasicMaterial({ color: 0x4aa3d8 })
+);
+water.rotation.x = -Math.PI / 2;
+water.position.y = 0.12;
+scene.add(water);
+
+// Sakura trees: all share the same height.
+const TREE_HEIGHT = 7, TREE_COUNT = 5, RING_RADIUS = 10;
+const trunkMat = mat(0x6b4a3a);
+const blossomMats = [mat(0xffb7d0), mat(0xff9ec1), mat(0xffc9dc)];
+
+function makeTree() {
+  const g = new THREE.Group();
+  const trunkH = TREE_HEIGHT * 0.5;
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.6, trunkH, 6), trunkMat);
+  trunk.position.y = trunkH / 2;
+  g.add(trunk);
+  // Canopy: a few low-poly blobs; top of the canopy lands at TREE_HEIGHT.
+  const blobs = [
+    [0, 0, 0, 2.4], [1.6, -0.5, 0.5, 1.8], [-1.5, -0.4, -0.6, 1.9],
+    [0.4, -0.6, -1.6, 1.7], [-0.3, 0.1, 1.6, 1.7],
+  ];
+  const cy = TREE_HEIGHT - 2.4; // center of the top blob
+  blobs.forEach(([x, y, z, r], i) => {
+    const b = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), blossomMats[i % 3]);
+    b.position.set(x, cy + y, z);
+    g.add(b);
+  });
+  return g;
+}
+
+for (let i = 0; i < TREE_COUNT; i++) {
+  const a = (i / TREE_COUNT) * Math.PI * 2;
+  const t = makeTree();
+  t.position.set(Math.cos(a) * RING_RADIUS, 0, Math.sin(a) * RING_RADIUS);
+  t.rotation.y = a * 3;
+  scene.add(t);
+}
+
+// Falling petals (single Points object, cheap)
+const PETALS = 150;
+const pos = new Float32Array(PETALS * 3);
+const speed = new Float32Array(PETALS);
+for (let i = 0; i < PETALS; i++) {
+  const r = Math.sqrt(Math.random()) * 16, a = Math.random() * Math.PI * 2;
+  pos.set([Math.cos(a) * r, Math.random() * TREE_HEIGHT, Math.sin(a) * r], i * 3);
+  speed[i] = 0.3 + Math.random() * 0.5;
+}
+const petalGeo = new THREE.BufferGeometry();
+petalGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+scene.add(new THREE.Points(petalGeo, new THREE.PointsMaterial({ color: 0xffc0d8, size: 0.2 })));
+
+// Simple drag / wheel orbit (no extra imports)
+let yaw = 0.6, pitch = 0.5, dist = 28;
+const el = renderer.domElement;
+const ptrs = new Map(); // active pointers: id -> {x, y}
+let pinch = 0;
+const clampDist = (d) => Math.min(40, Math.max(10, d));
+const pinchSpan = () => { const [a, b] = [...ptrs.values()]; return Math.hypot(a.x - b.x, a.y - b.y); };
+const dragging = () => ptrs.size > 0;
+el.addEventListener("pointerdown", (e) => {
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  try { el.setPointerCapture(e.pointerId); } catch (_) {}
+  if (ptrs.size === 2) pinch = pinchSpan();
+});
+function release(e) { ptrs.delete(e.pointerId); pinch = 0; }
+["pointerup", "pointercancel", "lostpointercapture"].forEach((t) => el.addEventListener(t, release));
+addEventListener("blur", () => { ptrs.clear(); pinch = 0; });
+el.addEventListener("pointermove", (e) => {
+  const p = ptrs.get(e.pointerId);
+  if (!p) return;
+  if (ptrs.size === 2) {
+    p.x = e.clientX; p.y = e.clientY;
+    const span = pinchSpan();
+    if (pinch > 0 && span > 0) dist = clampDist(dist * pinch / span);
+    pinch = span;
+    return;
+  }
+  yaw -= (e.clientX - p.x) * 0.005;
+  pitch = Math.min(1.4, Math.max(0.1, pitch + (e.clientY - p.y) * 0.005));
+  p.x = e.clientX; p.y = e.clientY;
+});
+el.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  dist = clampDist(dist + e.deltaY * 0.02);
+}, { passive: false });
+
+addEventListener("resize", () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+// Cap at ~30 fps: plenty for this scene and far cheaper on software GL.
+const clock = new THREE.Clock();
+let acc = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  acc += clock.getDelta();
+  if (acc < 1 / 30) return;
+  const dt = Math.min(acc, 0.1);
+  acc = 0;
+  if (!dragging()) yaw += dt * 0.08;
+  for (let i = 0; i < PETALS; i++) {
+    pos[i * 3 + 1] -= speed[i] * dt;
+    pos[i * 3] += Math.sin(clock.elapsedTime + i) * dt * 0.2;
+    if (pos[i * 3 + 1] < 0.15) pos[i * 3 + 1] = TREE_HEIGHT;
+  }
+  petalGeo.attributes.position.needsUpdate = true;
+  camera.position.set(
+    Math.sin(yaw) * Math.cos(pitch) * dist,
+    Math.sin(pitch) * dist + 1,
+    Math.cos(yaw) * Math.cos(pitch) * dist
+  );
+  camera.lookAt(0, 3, 0);
+  renderer.render(scene, camera);
+}
+animate();
+}
+</script>
+</body>
+</html>
