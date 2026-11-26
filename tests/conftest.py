@@ -4,6 +4,7 @@ import tempfile
 # Must be set before `app` is imported: a throwaway SQLite file per test run.
 _tmp = tempfile.TemporaryDirectory()
 os.environ["DATABASE_URL"] = f"sqlite:///{_tmp.name}/test.db"
+os.environ["SEED_DEMO"] = "1"
 os.environ["JWT_SECRET"] = "test-secret-test-secret-test-secret-123"
 
 import pytest  # noqa: E402

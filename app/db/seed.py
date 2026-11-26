@@ -1,4 +1,4 @@
-"""Idempotent seed data: demo user, character cards, two sample chats.
+"""Idempotent seed data: character cards (always), demo user (opt-in), character cards, two sample chats.
 
 Run manually with `python -m app.db.seed`.
 """
@@ -43,12 +43,12 @@ CHARACTERS = [
 ]
 
 
-def seed(db: Session) -> None:
+def seed(db: Session, demo_user: bool = True) -> None:
     existing = {c.name for c in db.scalars(select(Character))}
     db.add_all(Character(**c) for c in CHARACTERS if c["name"] not in existing)
     db.flush()
 
-    if db.scalar(select(User).where(User.username == DEMO_USER)):
+    if not demo_user or db.scalar(select(User).where(User.username == DEMO_USER)):
         db.commit()
         return
     demo = User(username=DEMO_USER, password_hash=hash_password(DEMO_PASSWORD))

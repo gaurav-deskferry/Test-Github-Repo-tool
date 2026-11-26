@@ -63,12 +63,12 @@ onMounted(load);
       </div>
       <span class="badge" title="Replies are canned placeholders until a real model is connected.">🚧 placeholder replies</span>
     </header>
-    <div ref="scroller" class="messages">
+    <div ref="scroller" class="messages" role="log" aria-live="polite" aria-label="Conversation">
       <MessageBubble v-for="m in session.messages" :key="m.id" :message="m" :emoji="character.emoji" />
     </div>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <form class="composer" @submit.prevent="send">
-      <input v-model="draft" placeholder="Type a message…" aria-label="Message" maxlength="4000" :disabled="sending" />
+      <input v-model="draft" @input="error = ''" placeholder="Type a message…" aria-label="Message" maxlength="4000" :disabled="sending" />
       <button class="btn primary" :disabled="sending || !draft.trim()">{{ sending ? "Sending…" : "Send" }}</button>
     </form>
   </section>

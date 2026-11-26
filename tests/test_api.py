@@ -51,3 +51,9 @@ def test_chat_lifecycle(client):
 
 def test_bad_token(client):
     assert client.get("/api/auth/me", headers={"Authorization": "Bearer junk"}).status_code == 401
+
+
+def test_register_duplicate_is_409(client):
+    body = {"username": "dupe_user", "password": "password123"}
+    assert client.post("/api/auth/register", json=body).status_code == 201
+    assert client.post("/api/auth/register", json=body).status_code == 409

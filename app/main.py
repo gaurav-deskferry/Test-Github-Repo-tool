@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from alembic import command
@@ -15,8 +16,8 @@ DESCRIPTION = """
 API for browsing **AI Character cards** and your own **chat sessions** (SQLite via SQLAlchemy + Alembic).
 
 ## Quick start
-1. Click **Authorize** (top right) and log in with `demo` / `demo1234`
-   (or create an account with `POST /api/auth/register`).
+1. Create an account with `POST /api/auth/register`, then click **Authorize** (top right) and log in.
+   (In dev with `SEED_DEMO=1` a `demo` account is also created; see the README.)
 2. Call **GET /api/characters** (public) and **GET /api/sessions** (requires login).
 
 Auth is JWT (HS256) sent as `Authorization: Bearer <token>`.
@@ -40,10 +41,13 @@ async def lifespan(_: FastAPI):
     if settings.database_url.startswith("sqlite:///"):
         from pathlib import Path
         Path(settings.database_url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
+    if not settings.jwt_secret_from_env:
+        logging.getLogger("uvicorn.error").warning(
+            "JWT_SECRET is not set: using a random per-process secret. Tokens will be invalid after restart "
+            "and across workers. Set JWT_SECRET in production.")
     migrate()
-    if settings.seed_demo:
-        with SessionLocal() as db:
-            seed(db)
+    with SessionLocal() as db:  # character cards are public content; demo user only if SEED_DEMO=1
+        seed(db, demo_user=settings.seed_demo)
     yield
 
 

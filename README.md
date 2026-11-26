@@ -13,7 +13,7 @@ bun run dev        # API on :8000 and Vite on :5173, in parallel -> open http://
 ```
 
 The DB (`data/app.db`) is created, migrated (Alembic) and seeded on API startup.
-Demo login: `demo` / `demo1234`. Swagger UI: http://localhost:8000/docs
+`bun run dev` sets `SEED_DEMO=1`, which creates a dev-only login `demo` / `demo1234` (never enabled by default; leave `SEED_DEMO` unset in production and set `JWT_SECRET`). Swagger UI: http://localhost:8000/docs
 
 Single-origin (production-like): `bun run build`, then `uvicorn app.main:app` serves the SPA at http://localhost:8000.
 

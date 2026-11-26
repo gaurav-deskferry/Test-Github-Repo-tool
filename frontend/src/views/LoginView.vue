@@ -6,6 +6,7 @@ import { useAuth } from "../stores/auth";
 const auth = useAuth();
 const route = useRoute();
 const router = useRouter();
+const isDev = import.meta.env.DEV;
 const mode = ref("login");
 const username = ref("");
 const password = ref("");
@@ -57,6 +58,6 @@ async function submit() {
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <button class="btn primary block" :disabled="busy">{{ busy ? "Please wait…" : isRegister ? "Sign up" : "Log in" }}</button>
     </form>
-    <p class="muted center">Just exploring? <button class="link" type="button" data-testid="use-demo" @click="useDemo">Use the demo account</button></p>
+    <p v-if="isDev" class="muted center">Just exploring? <button class="link" type="button" data-testid="use-demo" @click="useDemo">Use the demo account</button></p>
   </section>
 </template>

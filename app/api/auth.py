@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.core import security
 from app.models import User
@@ -21,7 +22,11 @@ def register(body: Credentials, db: DB):
         raise HTTPException(status.HTTP_409_CONFLICT, "Username already taken")
     user = User(username=body.username, password_hash=security.hash_password(body.password))
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:  # concurrent register with the same username
+        db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "Username already taken")
     return user
 
 

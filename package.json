@@ -4,7 +4,7 @@
   "workspaces": ["frontend"],
   "scripts": {
     "dev": "bun run --parallel dev:api dev:web",
-    "dev:api": "python -m uvicorn app.main:app --reload --port 8000",
+    "dev:api": "SEED_DEMO=1 python3 -m uvicorn app.main:app --reload --port 8000",
     "dev:web": "bun run --filter frontend dev",
     "build": "bun run --filter frontend build",
     "test": "bun run --parallel test:api test:web",
