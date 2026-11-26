@@ -41,6 +41,6 @@ Risks: NativeWind 4 / Tailwind 3 pinning; Reanimated + worklets native versions 
 3. Config: `tailwind.config.js` (nativewind preset, content globs), `babel.config.js` (jsxImportSource nativewind + nativewind/babel),
    `metro.config.js` (`withNativeWind`, input `src/global.css`), `postcss.config.js`, `nativewind-env.d.ts`, `app.json` (scheme, web bundler metro, router plugin).
 4. `src/global.css` with `@tailwind` directives; imported in root layout.
-5. `src/components/tw/*` wrappers via `cssInterop`/`styled` so `className` works on View/Text/Link/Image.
+5. `src/components/tw/*`: `cssInterop` wrappers for Link and Image; View/Text are re-exports that rely on babel `jsxImportSource: "nativewind"` for `className`.
 6. `src/app/_layout.tsx` (Stack, status bar) and `src/app/index.tsx` using only `className`.
 7. Verify: `tsc --noEmit`, `expo export --platform web`, browser screenshot/video of the web build.

@@ -3,10 +3,10 @@ import { Image as ExpoImage } from "expo-image";
 import { cssInterop } from "nativewind";
 import { Text as RNText, View as RNView } from "react-native";
 
-// cssInterop maps the `className` prop to `style` for components that
-// don't go through NativeWind's jsx runtime (third-party components).
-// RN View/Text are already covered by the jsx runtime; wrapping keeps one
-// import path (`@/components/tw`) for every styled primitive.
+// Link and Image come from third-party packages, so cssInterop maps their
+// `className` prop to `style`. View and Text are plain re-exports: `className`
+// on them works only because babel.config.js sets
+// `jsxImportSource: "nativewind"`. Removing that option breaks them silently.
 export const View = RNView;
 export const Text = RNText;
 
