@@ -11,7 +11,9 @@ const raw = [
 ["Northern Lights","Nova Lane","Neon Streets","4:05"],["Last Call","Aria Bloom","Sunset Tapes","3:12"]
 ].map(([title,artist,album,time],i)=>({id:i,title,artist,album,time,hue:(i*47)%360}));
 
-const grad = s => `linear-gradient(135deg,hsl(${s.hue} 70% 45%),hsl(${(s.hue+60)%360} 70% 25%))`;
+const fallback = s => `linear-gradient(135deg,hsl(${s.hue} 70% 45%),hsl(${(s.hue+60)%360} 70% 25%))`;
+// Real sample photos (picsum.photos), seeded per album; gradient shows underneath while loading or if offline.
+const grad = s => `url("https://picsum.photos/seed/${encodeURIComponent(s.album)}/300") center/cover, ${fallback(s)}`;
 const $ = id => document.getElementById(id);
 let current = -1, playing = false;
 
