@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dockyard: one route from ticket to pull request</title>
+<meta name="description" content="Background coding agents for teams. Plan, build in a sandbox, review, verify against a baseline, record QA, and open a pull request with the evidence.">
+<style>
+:root{--bg:#fff;--fg:#0f1b2d;--muted:#5b6b80;--card:#f4f7fb;--line:#dde4ee;--accent:#0b6cff;--ok:#12805c;--warn:#8a5200}
+@media(prefers-color-scheme:dark){:root{--bg:#0b121c;--fg:#e8eef7;--muted:#93a3b8;--card:#131d2b;--line:#23324a;--accent:#4d9bff;--ok:#3ccf9b;--warn:#f0a63a}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.55 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+a{color:inherit;text-decoration:none}
+a:focus-visible,.btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+header .wrap{display:flex;align-items:center;gap:24px;height:64px}
+.logo{font-weight:700;font-size:20px;margin-right:auto}
+nav{display:flex;gap:20px;color:var(--muted);font-size:14px}
+.btn{display:inline-block;padding:10px 18px;border-radius:8px;border:1px solid var(--line);font-weight:600;font-size:14px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.hero{padding:80px 0 48px}
+.eyebrow{color:var(--accent);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+h1{font-size:clamp(34px,6vw,60px);line-height:1.08;margin:12px 0 20px;max-width:16em}
+.hero p{color:var(--muted);font-size:18px;max-width:40em}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+section{padding:56px 0}
+h2{font-size:30px;margin:0 0 12px}
+.sub{color:var(--muted);margin:0 0 28px}
+.route{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px}
+.step b{display:block;color:var(--accent);font-size:12px;letter-spacing:.1em}
+body{overflow-x:hidden}
+.tablewrap{overflow-x:auto;margin-top:24px}
+table{min-width:560px;width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:12px;letter-spacing:.08em}
+.pill{padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--card);border:1px solid var(--line)}
+.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}
+.ports{display:flex;flex-wrap:wrap;gap:10px}
+.ports span{padding:8px 16px;border:1px solid var(--line);border-radius:99px;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+.card h3{margin:0 0 6px;font-size:17px}.card p{margin:0;color:var(--muted);font-size:14px}
+.evidence{font:13px/1.8 ui-monospace,monospace;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+.evidence div{display:flex;flex-wrap:wrap;gap:4px 16px}.evidence i{font-style:normal;color:var(--muted);width:90px;flex:none}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
+.final{text-align:center;background:var(--card);border-radius:16px;padding:56px 24px}
+footer{border-top:1px solid var(--line);margin-top:56px;padding:32px 0;color:var(--muted);font-size:14px}
+footer .cols{display:flex;gap:48px;flex-wrap:wrap;margin-bottom:20px}
+footer .cols div{display:flex;flex-direction:column;gap:6px}
+@media(max-width:760px){.route{grid-template-columns:1fr 1fr}.split{grid-template-columns:1fr}header .wrap{flex-wrap:wrap;height:auto;padding-top:12px;padding-bottom:12px;gap:10px 12px}nav{order:5;width:100%;overflow-x:auto;white-space:nowrap;gap:18px;padding-bottom:4px}.btn{padding:8px 12px}.hero{padding:48px 0 32px}}
+@media(max-width:420px){.route{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <a class="logo" href="#">dockyard</a>
+  <nav><a href="#route">Product</a><a href="#crew">Agents</a><a href="#ports">Integrations</a><a href="#safety">Security</a><a href="#">Pricing</a><a href="#">Docs</a></nav>
+  <a class="btn" href="#">Sign in</a><a class="btn primary" href="#">Start with GitHub</a>
+</div></header>
+
+<main>
+<div class="wrap hero">
+  <div class="eyebrow">Background coding agents</div>
+  <h1>One route from ticket to pull request.</h1>
+  <p>Hand over a ticket. It plans, builds in a sandbox, gets reviewed by a second agent, proves the checks against a baseline and records the feature working. Then it docks a pull request with the evidence aboard.</p>
+  <div class="cta"><a class="btn primary" href="#">Start with GitHub →</a><a class="btn" href="#">Go to your workspace →</a></div>
+</div>
+
+<section id="route"><div class="wrap">
+  <h2>Follow a run</h2>
+  <p class="sub">Each task moves through the same four stations.</p>
+  <div class="route">
+    <div class="step"><b>01 PLAN</b>Lead agent</div>
+    <div class="step"><b>02 BUILD</b>Implementers</div>
+    <div class="step"><b>03 REVIEW</b>Reviewer</div>
+    <div class="step"><b>04 VERIFY</b>Baseline + QA video</div>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>TASK</th><th>CHANGE</th><th>REPO</th><th>STATUS</th></tr></thead>
+    <tbody>
+      <tr><td>LF-218</td><td>Round JPY prices to whole yen</td><td>acme/web</td><td><span class="pill ok">Docked · PR #1482</span></td></tr>
+      <tr><td>PAY-77</td><td>Retry webhooks with backoff</td><td>acme/api</td><td><span class="pill warn">Sent back · fixing</span></td></tr>
+      <tr><td>#902</td><td>Dark mode for settings pages</td><td>acme/web</td><td><span class="pill">Verify · recording QA</span></td></tr>
+      <tr><td>LF-224</td><td>Bump Stripe SDK to v18</td><td>acme/api</td><td><span class="pill">Build · 2 implementers</span></td></tr>
+      <tr><td>API-31</td><td>Add CSV export to reports</td><td>acme/web</td><td><span class="pill">Plan · awaiting approval</span></td></tr>
+    </tbody>
+  </table></div>
+</div></section>
+
+<section id="ports"><div class="wrap">
+  <h2>Integrations</h2>
+  <div class="ports"><span>GitHub</span><span>GitLab</span><span>Linear</span><span>Jira</span><span>Asana</span><span>ClickUp</span><span>Trello</span><span>Notion</span><span>WordPress</span></div>
+</div></section>
+
+<section id="crew"><div class="wrap">
+  <h2>Agents</h2>
+  <p class="sub">Several specialised agents that check one another's work.</p>
+  <div class="grid">
+    <div class="card"><h3>Lead agent</h3><p>Plans the task, splits it into parts, asks one question if it must.</p></div>
+    <div class="card"><h3>Designer</h3><p>Draws a mockup you can approve before any code.</p></div>
+    <div class="card"><h3>Implementers</h3><p>Build the parts in sandboxes, side by side.</p></div>
+    <div class="card"><h3>Reviewer</h3><p>Reads the joined change with fresh eyes.</p></div>
+    <div class="card"><h3>Docs agent</h3><p>Brings READMEs up to date after a release.</p></div>
+    <div class="card"><h3>Learning</h3><p>Turns outcomes into repo memory notes.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap split">
+  <div>
+    <h2>Pull requests with the evidence attached.</h2>
+    <p class="sub">Where it came from, what it touched, what passed before and after, what the reviewer said and what nobody verified. Stamped on before you open the diff.</p>
+    <a class="btn" href="#">See every field →</a>
+  </div>
+  <div class="evidence">
+    <div><i>FROM</i>LF-218</div><div><i>TO</i>#1482</div>
+    <div><i>FILES</i>5 touched</div><div><i>CHECKS</i>3 pass · 1 already failing</div>
+    <div><i>REVIEW</i>Approved after 1 fix</div><div><i>QA</i>Recorded · 0:47</div>
+    <div><i>CAVEAT</i>Three-decimal currencies untested</div><div><i>RISK</i>LOW</div>
+    <div><i>MERGED BY</i>a person</div>
+  </div>
+</div></section>
+
+<section id="safety"><div class="wrap">
+  <h2>Security</h2>
+  <p class="sub">Design principles for running agents on your code.</p>
+  <div class="grid">
+    <div class="card"><h3>01 Isolated sandbox</h3><p>Each run works in its own sandbox, apart from your accounts.</p></div>
+    <div class="card"><h3>02 Restricted network</h3><p>Runs reach only the services a task needs.</p></div>
+    <div class="card"><h3>03 Careful secrets</h3><p>Secrets are kept out of logs and commits.</p></div>
+    <div class="card"><h3>04 Humans merge</h3><p>Agents push to a work branch; a person reviews and merges.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap"><div class="final">
+  <h2>Ready to clear your backlog?</h2>
+  <div class="cta" style="justify-content:center"><a class="btn primary" href="#">Start with GitHub →</a><a class="btn" href="#">Go to your workspace →</a></div>
+</div></div></section>
+</main>
+
+<footer><div class="wrap">
+  <div class="cols">
+    <div><b>The route</b><a href="#">How it works</a><a href="#">Agents</a><a href="#">Browser QA</a></div>
+    <div><b>Platform</b><a href="#">Security</a><a href="#">Team controls</a><a href="#">Pricing</a></div>
+    <div><b>Log</b><a href="#">Blog</a><a href="#">Changelog</a><a href="#">Contact</a></div>
+  </div>
+  © 2026 Dockyard · Terms · Privacy — Concept page for a fictional product.
+</div></footer>
+</body>
+</html>
