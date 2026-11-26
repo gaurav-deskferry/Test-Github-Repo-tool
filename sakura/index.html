@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sakura Pond — Three.js</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #f6dfe6;
+      font-family: "Georgia", serif;
+    }
+    canvas { display: block; }
+    #title {
+      position: fixed;
+      top: 24px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: #fff;
+      pointer-events: none;
+      text-shadow: 0 2px 12px rgba(120, 40, 70, 0.45);
+    }
+    #title h1 {
+      margin: 0;
+      font-weight: normal;
+      letter-spacing: 0.3em;
+      font-size: clamp(22px, 4vw, 42px);
+    }
+    #title p {
+      margin: 6px 0 0;
+      font-size: 14px;
+      letter-spacing: 0.15em;
+      opacity: 0.9;
+    }
+    #hint {
+      position: fixed;
+      bottom: 16px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 13px;
+      pointer-events: none;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="title">
+    <h1>桜 SAKURA</h1>
+    <p>a quiet pond beneath the blossoms</p>
+  </div>
+  <div id="hint">Drag to look around · Scroll to zoom</div>
+
+  <script type="module">
+    import * as THREE from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
+
+    // Optional URL tuning, e.g. ?petals=200&pixelRatio=1 for slower machines.
+    const params = new URLSearchParams(location.search);
+    const PETAL_COUNT = Number(params.get("petals") ?? 900);
+    const GRASS_COUNT = Number(params.get("grass") ?? 9000);
+    const MAX_PIXEL_RATIO = Number(params.get("pixelRatio") ?? 2);
+
+    const POND_RADIUS = 9;
+    const WATER_LEVEL = 0;
+
+    // Deterministic random so the scene looks the same on every load.
+    let seed = 20261126;
+    const rand = () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    const range = (a, b) => a + rand() * (b - a);
+
+    // ---------------------------------------------------------------------
+    // Renderer, scene, camera
+    // ---------------------------------------------------------------------
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const FOG_COLOR = new THREE.Color("#f3d9e2");
+    scene.fog = new THREE.Fog(FOG_COLOR, 40, 140);
+
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 400);
+    camera.position.set(22, 11, 24);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 2, 0);
+    controls.enableDamping = true;
+    controls.minDistance = 8;
+    controls.maxDistance = 70;
+    controls.maxPolarAngle = Math.PI * 0.48;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.35;
+
+    // ---------------------------------------------------------------------
+    // Sky dome (vertical gradient)
+    // ---------------------------------------------------------------------
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(300, 32, 16),
+      new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        uniforms: {
+          top: { value: new THREE.Color("#8fb8e8") },
+          middle: { value: new THREE.Color("#f7d6e0") },
+          bottom: { value: FOG_COLOR },
+        },
+        vertexShader: /* glsl */ `
+          varying vec3 vPos;
+          void main() {
+            vPos = normalize(position);
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }`,
+        fragmentShader: /* glsl */ `
+          uniform vec3 top; uniform vec3 middle; uniform vec3 bottom;
+          varying vec3 vPos;
+          void main() {
+            float h = vPos.y;
+            vec3 c = h > 0.0 ? mix(middle, top, smoothstep(0.0, 0.6, h)) : bottom;
+            gl_FragColor = vec4(c, 1.0);
+          }`,
+      })
+    );
+    scene.add(sky);
+
+    // ---------------------------------------------------------------------
+    // Lights
+    // ---------------------------------------------------------------------
+    scene.add(new THREE.HemisphereLight("#ffe9f1", "#5f7d4a", 1.1));
+
+    const sun = new THREE.DirectionalLight("#fff3e6", 2.2);
+    sun.position.set(-30, 40, 20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -40;
+    sun.shadow.camera.right = 40;
+    sun.shadow.camera.top = 40;
+    sun.shadow.camera.bottom = -40;
+    sun.shadow.camera.far = 120;
+    sun.shadow.bias = -0.0005;
+    scene.add(sun);
+
+    // ---------------------------------------------------------------------
+    // Terrain: gentle meadow with a basin carved for the pond
+    // ---------------------------------------------------------------------
+    function terrainHeight(x, z) {
+      const r = Math.hypot(x, z);
+      // Rolling hills that grow towards the horizon.
+      let h =
+        Math.sin(x * 0.08) * Math.cos(z * 0.07) * 1.2 +
+        Math.sin(x * 0.21 + z * 0.13) * 0.35 +
+        Math.max(0, r - 45) * 0.18;
+      // Flatten the meadow ring around the pond.
+      const flat = THREE.MathUtils.smoothstep(r, POND_RADIUS + 2, POND_RADIUS + 18);
+      h *= flat;
+      h += 0.35 * (1 - flat);
+      // Pond basin.
+      const basin = 1 - THREE.MathUtils.smoothstep(r, POND_RADIUS - 2.5, POND_RADIUS + 1.2);
+      h -= basin * 2.2;
+      return h;
+    }
+
+    {
+      const size = 220;
+      const geo = new THREE.PlaneGeometry(size, size, 220, 220);
+      geo.rotateX(-Math.PI / 2);
+      const pos = geo.attributes.position;
+      const colors = new Float32Array(pos.count * 3);
+      const grassA = new THREE.Color("#6f9a4c");
+      const grassB = new THREE.Color("#93b862");
+      const mud = new THREE.Color("#7a6a4f");
+      const c = new THREE.Color();
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        const y = terrainHeight(x, z);
+        pos.setY(i, y);
+        const n = 0.5 + 0.5 * Math.sin(x * 0.7) * Math.cos(z * 0.6);
+        c.copy(grassA).lerp(grassB, n);
+        // Damp earth near and below the water line.
+        const shore = 1 - THREE.MathUtils.smoothstep(y, -0.4, 0.35);
+        c.lerp(mud, shore);
+        colors.set([c.r, c.g, c.b], i * 3);
+      }
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geo.computeVertexNormals();
+      const ground = new THREE.Mesh(
+        geo,
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 })
+      );
+      ground.receiveShadow = true;
+      scene.add(ground);
+    }
+
+    // ---------------------------------------------------------------------
+    // Pond water
+    // ---------------------------------------------------------------------
+    const waterUniforms = {
+      uTime: { value: 0 },
+      uDeep: { value: new THREE.Color("#1f5f6e") },
+      uShallow: { value: new THREE.Color("#7fb9b8") },
+      uSky: { value: new THREE.Color("#f4d3df") },
+      uRadius: { value: POND_RADIUS + 1.2 },
+    };
+    const water = new THREE.Mesh(
+      new THREE.CircleGeometry(POND_RADIUS + 1.2, 96),
+      new THREE.ShaderMaterial({
+        transparent: true,
+        uniforms: waterUniforms,
+        vertexShader: /* glsl */ `
+          varying vec3 vWorld;
+          varying vec2 vLocal;
+          void main() {
+            vLocal = position.xy;
+            vec4 w = modelMatrix * vec4(position, 1.0);
+            vWorld = w.xyz;
+            gl_Position = projectionMatrix * viewMatrix * w;
+          }`,
+        fragmentShader: /* glsl */ `
+          uniform float uTime; uniform vec3 uDeep; uniform vec3 uShallow; uniform vec3 uSky;
+          uniform float uRadius;
+          varying vec3 vWorld; varying vec2 vLocal;
+          void main() {
+            float r = length(vLocal) / uRadius;
+            // Soft ripples built from a few travelling waves.
+            float w =
+              sin(vWorld.x * 1.3 + uTime * 1.1) * 0.5 +
+              sin(vWorld.z * 1.7 - uTime * 0.9) * 0.5 +
+              sin((vWorld.x + vWorld.z) * 2.3 + uTime * 1.6) * 0.3;
+            vec3 n = normalize(vec3(w * 0.08, 1.0, w * 0.06));
+            vec3 viewDir = normalize(cameraPosition - vWorld);
+            float fresnel = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0);
+            vec3 base = mix(uDeep, uShallow, smoothstep(0.55, 1.0, r));
+            vec3 col = mix(base, uSky, clamp(fresnel * 0.6 + 0.05, 0.0, 1.0));
+            col += vec3(1.0, 0.95, 0.97) * pow(max(w, 0.0), 6.0) * 0.12;
+            float alpha = mix(0.92, 0.55, smoothstep(0.85, 1.0, r));
+            gl_FragColor = vec4(col, alpha);
+          }`,
+      })
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = WATER_LEVEL;
+    scene.add(water);
+
+    // Lily pads
+    {
+      const padShape = new THREE.Shape();
+      padShape.absarc(0, 0, 0.55, 0.25, Math.PI * 2 - 0.25, false);
+      padShape.lineTo(0, 0);
+      const padGeo = new THREE.ShapeGeometry(padShape, 20);
+      padGeo.rotateX(-Math.PI / 2);
+      const padMat = new THREE.MeshStandardMaterial({ color: "#4f7f3a", roughness: 0.7, side: THREE.DoubleSide });
+      const flowerMat = new THREE.MeshStandardMaterial({ color: "#fbe6ef", roughness: 0.6 });
+      const flowerGeo = new THREE.ConeGeometry(0.16, 0.18, 6);
+      for (let i = 0; i < 18; i++) {
+        const a = range(0, Math.PI * 2);
+        const r = range(2.5, POND_RADIUS - 1.5);
+        const pad = new THREE.Mesh(padGeo, padMat);
+        const s = range(0.6, 1.3);
+        pad.scale.set(s, 1, s);
+        pad.position.set(Math.cos(a) * r, WATER_LEVEL + 0.02, Math.sin(a) * r);
+        pad.rotation.y = range(0, Math.PI * 2);
+        pad.receiveShadow = true;
+        scene.add(pad);
+        if (rand() < 0.3) {
+          const flower = new THREE.Mesh(flowerGeo, flowerMat);
+          flower.position.copy(pad.position).add(new THREE.Vector3(0.1, 0.09, 0.05));
+          flower.rotation.x = Math.PI;
+          scene.add(flower);
+        }
+      }
+    }
+
+    // Natural stones scattered along the shore
+    {
+      const stoneGeo = new THREE.DodecahedronGeometry(1, 1);
+      const p = stoneGeo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const v = new THREE.Vector3().fromBufferAttribute(p, i);
+        v.multiplyScalar(1 + Math.sin(v.x * 5) * 0.08 + Math.cos(v.z * 4) * 0.08);
+        p.setXYZ(i, v.x, v.y, v.z);
+      }
+      stoneGeo.computeVertexNormals();
+      const stoneMat = new THREE.MeshStandardMaterial({ color: "#8a8478", roughness: 1, flatShading: true });
+      const count = 34;
+      const stones = new THREE.InstancedMesh(stoneGeo, stoneMat, count);
+      const m = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      const e = new THREE.Euler();
+      const color = new THREE.Color();
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2 + range(-0.08, 0.08);
+        const r = POND_RADIUS + range(0.2, 1.4);
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        const s = range(0.25, 0.75);
+        q.setFromEuler(e.set(range(0, 3), range(0, 3), range(0, 3)));
+        m.compose(
+          new THREE.Vector3(x, terrainHeight(x, z) + s * 0.25, z),
+          q,
+          new THREE.Vector3(s * range(1, 1.6), s * 0.7, s)
+        );
+        stones.setMatrixAt(i, m);
+        stones.setColorAt(i, color.setHSL(0.09, 0.06, range(0.42, 0.6)));
+      }
+      stones.castShadow = true;
+      stones.receiveShadow = true;
+      scene.add(stones);
+    }
+
+    // ---------------------------------------------------------------------
+    // Grass blades (instanced, swaying in the vertex shader)
+    // ---------------------------------------------------------------------
+    const grassUniforms = { uTime: { value: 0 } };
+    {
+      const bladeGeo = new THREE.PlaneGeometry(0.08, 0.55, 1, 3);
+      bladeGeo.translate(0, 0.275, 0);
+      const bladeMat = new THREE.MeshStandardMaterial({
+        color: "#8fbb5e",
+        roughness: 0.9,
+        emissive: "#2f4f1c",
+        emissiveIntensity: 0.35,
+        side: THREE.DoubleSide,
+      });
+      bladeMat.onBeforeCompile = (shader) => {
+        shader.uniforms.uTime = grassUniforms.uTime;
+        shader.vertexShader = "uniform float uTime;\n" + shader.vertexShader.replace(
+          "#include <begin_vertex>",
+          `#include <begin_vertex>
+           vec4 iw = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+           float sway = sin(uTime * 1.6 + iw.x * 0.4 + iw.z * 0.3) * 0.12;
+           transformed.x += sway * position.y * position.y * 3.0;`
+        );
+      };
+      const grass = new THREE.InstancedMesh(bladeGeo, bladeMat, GRASS_COUNT);
+      const m = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      const color = new THREE.Color();
+      let placed = 0;
+      while (placed < GRASS_COUNT) {
+        const a = range(0, Math.PI * 2);
+        const r = POND_RADIUS + 1.6 + Math.pow(rand(), 1.4) * 40;
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        const s = range(0.6, 1.5);
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), range(0, Math.PI));
+        m.compose(new THREE.Vector3(x, terrainHeight(x, z), z), q, new THREE.Vector3(1, s, 1));
+        grass.setMatrixAt(placed, m);
+        grass.setColorAt(placed, color.setHSL(range(0.22, 0.28), 0.45, range(0.32, 0.48)));
+        placed++;
+      }
+      grass.receiveShadow = true;
+      scene.add(grass);
+    }
+
+    // ---------------------------------------------------------------------
+    // Sakura trees: recursive branches + blossom clusters
+    // ---------------------------------------------------------------------
+    const barkMat = new THREE.MeshStandardMaterial({ color: "#4a3329", roughness: 0.95 });
+    const blossomMat = new THREE.MeshStandardMaterial({
+      roughness: 0.8,
+      emissive: "#ff9ec0",
+      emissiveIntensity: 0.22,
+    });
+    const blossomGeo = new THREE.IcosahedronGeometry(0.26, 1);
+    const BLOSSOM_PALETTE = ["#ffc7d9", "#f9a8c4", "#ffdbe7", "#f6b3cb", "#fff0f5"].map((c) => new THREE.Color(c));
+
+    const blossomAnchors = []; // world positions where petals fall from
+    const trees = [];
+
+    function buildTree(rootX, rootZ, scale) {
+      const branchGeos = [];
+      const blossomPoints = [];
+      const up = new THREE.Vector3(0, 1, 0);
+
+      function branch(start, dir, length, radius, depth) {
+        const end = start.clone().addScaledVector(dir, length);
+        const g = new THREE.CylinderGeometry(radius * 0.68, radius, length, 7, 1);
+        g.translate(0, length / 2, 0);
+        g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, dir));
+        g.translate(start.x, start.y, start.z);
+        branchGeos.push(g);
+
+        if (depth === 0) {
+          // Cluster of blossoms around each twig tip.
+          for (let i = 0; i < 14; i++) {
+            blossomPoints.push(
+              end.clone().add(new THREE.Vector3(range(-0.9, 0.9), range(-0.4, 0.7), range(-0.9, 0.9)))
+            );
+          }
+          return;
+        }
+        const children = depth > 3 ? 2 : 3;
+        for (let i = 0; i < children; i++) {
+          // Sakura branches spread wide and slightly upward.
+          const d = dir.clone();
+          const yaw = range(0, Math.PI * 2);
+          const tilt = range(0.35, 0.85);
+          const side = new THREE.Vector3(Math.cos(yaw), 0, Math.sin(yaw));
+          d.lerp(side, tilt).normalize();
+          d.y = Math.max(d.y, 0.12);
+          d.normalize();
+          branch(end, d, length * range(0.68, 0.82), radius * 0.62, depth - 1);
+        }
+        // Mid-branch blossoms for a fuller canopy.
+        if (depth <= 2) {
+          for (let i = 0; i < 6; i++) {
+            blossomPoints.push(
+              start.clone().lerp(end, range(0.4, 1)).add(new THREE.Vector3(range(-0.6, 0.6), range(-0.2, 0.5), range(-0.6, 0.6)))
+            );
+          }
+        }
+      }
+
+      const lean = new THREE.Vector3(range(-0.15, 0.15), 1, range(-0.15, 0.15)).normalize();
+      branch(new THREE.Vector3(0, -0.3, 0), lean, 3.2, 0.42, 5);
+
+      const trunk = new THREE.Mesh(mergeGeometries(branchGeos), barkMat);
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      branchGeos.forEach((g) => g.dispose());
+
+      const blossoms = new THREE.InstancedMesh(blossomGeo, blossomMat, blossomPoints.length);
+      const m = new THREE.Matrix4();
+      const q = new THREE.Quaternion();
+      const e = new THREE.Euler();
+      blossomPoints.forEach((p, i) => {
+        const s = range(0.7, 1.35);
+        q.setFromEuler(e.set(range(0, 6), range(0, 6), range(0, 6)));
+        m.compose(p, q, new THREE.Vector3(s, s, s));
+        blossoms.setMatrixAt(i, m);
+        blossoms.setColorAt(i, BLOSSOM_PALETTE[Math.floor(rand() * BLOSSOM_PALETTE.length)]);
+      });
+      blossoms.castShadow = true;
+
+      const tree = new THREE.Group();
+      tree.add(trunk, blossoms);
+      tree.position.set(rootX, terrainHeight(rootX, rootZ), rootZ);
+      tree.scale.setScalar(scale);
+      tree.rotation.y = range(0, Math.PI * 2);
+      tree.updateMatrixWorld(true);
+      scene.add(tree);
+      trees.push(tree);
+
+      // Keep a sample of blossom positions (in world space) for petal spawning.
+      for (let i = 0; i < blossomPoints.length; i += 3) {
+        blossomAnchors.push(blossomPoints[i].clone().applyMatrix4(tree.matrixWorld));
+      }
+    }
+
+    // A ring of trees around the pond, plus a few further back for depth.
+    const TREE_RING = 7;
+    for (let i = 0; i < TREE_RING; i++) {
+      const a = (i / TREE_RING) * Math.PI * 2 + range(-0.2, 0.2);
+      const r = POND_RADIUS + range(4, 6.5);
+      buildTree(Math.cos(a) * r, Math.sin(a) * r, range(0.9, 1.15));
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = range(0, Math.PI * 2);
+      const r = range(28, 42);
+      buildTree(Math.cos(a) * r, Math.sin(a) * r, range(0.8, 1.05));
+    }
+
+    // ---------------------------------------------------------------------
+    // Falling petals
+    // ---------------------------------------------------------------------
+    const petalShape = new THREE.Shape();
+    petalShape.moveTo(0, 0);
+    petalShape.bezierCurveTo(0.09, 0.05, 0.1, 0.16, 0.03, 0.22);
+    petalShape.lineTo(0, 0.19);
+    petalShape.lineTo(-0.03, 0.22);
+    petalShape.bezierCurveTo(-0.1, 0.16, -0.09, 0.05, 0, 0);
+    const petalGeo = new THREE.ShapeGeometry(petalShape, 6);
+    petalGeo.translate(0, -0.1, 0);
+    const petalMat = new THREE.MeshStandardMaterial({
+      color: "#ffd1e0",
+      roughness: 0.6,
+      side: THREE.DoubleSide,
+      emissive: "#ff9fbf",
+      emissiveIntensity: 0.12,
+    });
+    const petals = new THREE.InstancedMesh(petalGeo, petalMat, PETAL_COUNT);
+    petals.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(petals);
+
+    const FALLING = 0, FLOATING = 1, RESTING = 2;
+    const petalState = [];
+    function spawnPetal(p, initial) {
+      const anchor = blossomAnchors[Math.floor(rand() * blossomAnchors.length)];
+      p.pos.copy(anchor).add(new THREE.Vector3(range(-1, 1), range(-0.5, 0.5), range(-1, 1)));
+      if (initial) p.pos.y = range(0.5, p.pos.y);
+      p.vel.set(range(-0.2, 0.2), -range(0.35, 0.7), range(-0.2, 0.2));
+      p.rot.set(range(0, 6), range(0, 6), range(0, 6));
+      p.spin.set(range(-2, 2), range(-2, 2), range(-2, 2));
+      p.phase = range(0, Math.PI * 2);
+      p.mode = FALLING;
+      p.timer = 0;
+    }
+    for (let i = 0; i < PETAL_COUNT; i++) {
+      const p = {
+        pos: new THREE.Vector3(),
+        vel: new THREE.Vector3(),
+        rot: new THREE.Euler(),
+        spin: new THREE.Vector3(),
+        phase: 0,
+        mode: FALLING,
+        timer: 0,
+      };
+      spawnPetal(p, true);
+      petalState.push(p);
+    }
+
+    const wind = new THREE.Vector3(0.35, 0, 0.15);
+    const tmpM = new THREE.Matrix4();
+    const tmpQ = new THREE.Quaternion();
+    const one = new THREE.Vector3(1, 1, 1);
+
+    function updatePetals(dt, t) {
+      let floating = 0;
+      for (let i = 0; i < PETAL_COUNT; i++) {
+        const p = petalState[i];
+        if (p.mode === FALLING) {
+          p.pos.x += (p.vel.x + wind.x + Math.sin(t * 1.3 + p.phase) * 0.35) * dt;
+          p.pos.z += (p.vel.z + wind.z + Math.cos(t * 1.1 + p.phase) * 0.35) * dt;
+          p.pos.y += p.vel.y * dt;
+          p.rot.x += p.spin.x * dt;
+          p.rot.y += p.spin.y * dt;
+          p.rot.z += p.spin.z * dt;
+          const r = Math.hypot(p.pos.x, p.pos.z);
+          if (r < POND_RADIUS + 0.5 && p.pos.y <= WATER_LEVEL + 0.03) {
+            p.mode = FLOATING;
+            p.pos.y = WATER_LEVEL + 0.03;
+            p.rot.set(-Math.PI / 2, 0, range(0, 6));
+          } else if (r >= POND_RADIUS + 0.5) {
+            const g = terrainHeight(p.pos.x, p.pos.z) + 0.03;
+            if (p.pos.y <= g) {
+              p.mode = RESTING;
+              p.pos.y = g;
+              p.rot.set(-Math.PI / 2, 0, range(0, 6));
+            }
+          }
+        } else {
+          p.timer += dt;
+          if (p.mode === FLOATING) {
+            floating++;
+            // Drift slowly with the surface, staying inside the pond.
+            p.pos.x += Math.sin(t * 0.4 + p.phase) * 0.08 * dt;
+            p.pos.z += Math.cos(t * 0.3 + p.phase) * 0.08 * dt;
+            p.rot.z += 0.15 * dt;
+            p.pos.y = WATER_LEVEL + 0.03 + Math.sin(t * 1.5 + p.pos.x) * 0.01;
+          }
+          if (p.timer > (p.mode === FLOATING ? 18 : 8)) spawnPetal(p, false);
+        }
+        tmpQ.setFromEuler(p.rot);
+        tmpM.compose(p.pos, tmpQ, one);
+        petals.setMatrixAt(i, tmpM);
+      }
+      petals.instanceMatrix.needsUpdate = true;
+      return floating;
+    }
+
+    // ---------------------------------------------------------------------
+    // Loop
+    // ---------------------------------------------------------------------
+    // Small state object, handy for debugging or automated checks.
+    window.__sakura = {
+      trees: trees.length,
+      petals: PETAL_COUNT,
+      floatingPetals: 0,
+      frames: 0,
+      pondRadius: POND_RADIUS,
+    };
+
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      const dt = Math.min(clock.getDelta(), 0.05);
+      const t = clock.elapsedTime;
+      waterUniforms.uTime.value = t;
+      grassUniforms.uTime.value = t;
+      window.__sakura.floatingPetals = updatePetals(dt, t);
+      controls.update();
+      renderer.render(scene, camera);
+      window.__sakura.frames++;
+    });
+
+    addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
