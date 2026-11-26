@@ -1,0 +1,53 @@
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:#121212;color:#fff;font-family:"Segoe UI",Helvetica,Arial,sans-serif;padding-left:220px;padding-bottom:90px}
+#progress{position:fixed;top:0;left:0;height:3px;width:0;background:#1db954;z-index:30}
+.sidebar{position:fixed;inset:0 auto 0 0;width:220px;background:#000;padding:24px;z-index:10}
+.logo{font-size:24px;font-weight:800;color:#1db954;margin-bottom:32px}
+.sidebar nav a{display:block;color:#b3b3b3;text-decoration:none;padding:12px 0;font-weight:600;transition:color .2s,transform .2s}
+.sidebar nav a:hover,.sidebar nav a.active{color:#fff;transform:translateX(6px)}
+main{padding:0 32px 40px}
+.topbar{position:sticky;top:0;padding:16px 0;background:linear-gradient(#121212 70%,transparent);z-index:5}
+#search{width:100%;max-width:360px;padding:12px 18px;border-radius:30px;border:0;background:#2a2a2a;color:#fff;font-size:14px}
+.hero{padding:60px 0 30px;background:radial-gradient(circle at 20% 0,#1db95455,transparent 60%)}
+.hero h1{font-size:clamp(32px,6vw,64px)}
+.hero p{color:#b3b3b3;margin-top:8px}
+section{margin-top:40px}
+h2{font-size:24px;margin-bottom:16px}
+.row{display:flex;gap:18px;overflow-x:auto;padding:8px 4px 16px;scroll-snap-type:x mandatory;scrollbar-width:thin}
+.card{flex:0 0 170px;background:#181818;border-radius:10px;padding:14px;cursor:pointer;scroll-snap-align:start;position:relative;transition:background .3s,transform .3s}
+.card:hover{background:#282828;transform:translateY(-6px)}
+.cover,.art{aspect-ratio:1;border-radius:8px;box-shadow:0 8px 20px #0008}
+.card .cover{margin-bottom:12px}
+.card h3{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card p{font-size:13px;color:#b3b3b3;margin-top:4px}
+.cw{position:relative}
+.card:focus-visible,.song:focus-visible,.controls button:focus-visible,#search:focus-visible{outline:2px solid #1db954;outline-offset:2px}
+.card .pbtn{display:grid;place-items:center;position:absolute;right:8px;bottom:8px;width:44px;height:44px;border-radius:50%;background:#1db954;color:#000;border:0;font-size:16px;opacity:0;transform:translateY(10px);transition:.3s}
+.card:hover .pbtn,.card:focus-visible .pbtn,.card:focus-within .pbtn{opacity:1;transform:none}
+.list-head,.song{display:grid;grid-template-columns:40px 1fr 1fr 60px;gap:12px;align-items:center;padding:10px 12px}
+.list-head{color:#b3b3b3;font-size:13px;border-bottom:1px solid #333}
+ol{list-style:none}
+.song{border-radius:6px;cursor:pointer;transition:background .2s}
+.song:hover{background:#2a2a2a}
+.song.playing .t{color:#1db954}
+.song .t{display:flex;align-items:center;gap:12px}
+.song .mini{width:40px;height:40px;border-radius:4px;flex:none}
+.song small{display:block;color:#b3b3b3}
+.song .al{color:#b3b3b3;font-size:14px}
+.reveal,.song,.card{opacity:0;transform:translateY(40px);transition:opacity .7s ease,transform .7s ease,background .3s}
+.reveal.in,.song.in,.card.in{opacity:1;transform:none}
+.card.in:hover{transform:translateY(-6px)}
+.player{position:fixed;left:220px;right:0;bottom:0;height:80px;background:#181818;border-top:1px solid #333;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 20px;z-index:20}
+.now{display:flex;gap:12px;align-items:center}
+.now .art{width:52px;background:#333}
+.now small{display:block;color:#b3b3b3}
+.controls button{background:none;border:0;color:#fff;font-size:20px;cursor:pointer;margin:0 8px}
+#play{background:#fff;color:#000;border-radius:50%;width:40px;height:40px;font-size:16px}
+.bar{grid-column:1/-1;height:3px;background:#444;position:absolute;left:0;right:0;top:0}
+#barFill{height:100%;width:0;background:#1db954}
+.player.on #barFill{animation:fill 30s linear forwards}
+.player.paused #barFill{animation-play-state:paused}
+@keyframes fill{to{width:100%}}
+@media(max-width:700px){body{padding-left:0}.sidebar{position:static;width:auto;display:flex;align-items:center;gap:14px;padding:12px 16px;overflow-x:auto}.logo{margin:0 8px 0 0;font-size:18px}.sidebar nav{display:flex;gap:14px}.sidebar nav a{padding:4px 0;white-space:nowrap}.player{left:0;grid-template-columns:minmax(0,1fr) auto;padding:0 12px}.now>div:last-child{min-width:0}.now strong,.now small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}main{padding:0 16px 40px}.list-head span:nth-child(3),.song .al{display:none}.list-head,.song{grid-template-columns:30px 1fr 50px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.reveal,.song,.card{opacity:1;transform:none}}

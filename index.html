@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wavify – Home</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="progress"></div>
+<aside class="sidebar">
+  <div class="logo">● Wavify</div>
+  <nav>
+    <a class="active" href="#top">Home</a>
+    <a href="#trending">Trending</a>
+    <a href="#albums">Albums</a>
+    <a href="#all-songs">All Songs</a>
+  </nav>
+</aside>
+<main id="top">
+  <header class="topbar"><input id="search" type="search" placeholder="Search songs or artists…" aria-label="Search songs"></header>
+  <section class="hero reveal">
+    <h1>Good <span id="greet">day</span></h1>
+    <p>Millions of songs. Scroll to explore.</p>
+  </section>
+
+  <section id="trending" class="reveal">
+    <h2>Trending now</h2>
+    <div class="row" id="trendingRow"></div>
+  </section>
+
+  <section id="albums" class="reveal">
+    <h2>Popular albums</h2>
+    <div class="row" id="albumsRow"></div>
+  </section>
+
+  <section id="all-songs" class="reveal">
+    <h2>All songs</h2>
+    <div class="list-head"><span>#</span><span>Title</span><span>Album</span><span>Time</span></div>
+    <ol id="songList"></ol>
+    <p id="empty" hidden>No songs found.</p>
+  </section>
+</main>
+<footer class="player">
+  <div class="now"><div class="art" id="pArt"></div><div><strong id="pTitle">Nothing playing</strong><small id="pArtist">Pick a song</small></div></div>
+  <div class="controls"><button id="prev" aria-label="Previous">⏮</button><button id="play" aria-label="Play/Pause">▶</button><button id="next" aria-label="Next">⏭</button></div>
+  <div class="bar"><div id="barFill"></div></div>
+</footer>
+<script src="script.js"></script>
+</body>
+</html>
